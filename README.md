@@ -25,7 +25,7 @@ See file `example.php` for simple usage example.
 
 Options is array with next keys:
 
-* `file` - filename with result icml without path (default: <shopname>.catalog.xml)
+* `file` - filename with result icml without path (default: shopname.catalog.xml)
 * `directory` - target directory for icml file (default: current directory)
 * `ignoreOffers` - if `true` consignment from MoySklad will be ignored
 * `ignoreCategories` - string `'all'` or array with keys:
