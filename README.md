@@ -4,7 +4,7 @@ ICML generator for the MoySklad catalog
 
 ## Usage
 
-1) Include file 'MoySkladICMLParser.php'
+1) Include file `MoySkladICMLParser.php`
 
 2) Configure parser
 
