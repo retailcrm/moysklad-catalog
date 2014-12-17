@@ -1,12 +1,12 @@
 # moyskad-catalog
 
-ICML generator for the MoySklad catalog
+Генератор ICML для каталога из МойСклад
 
-## Usage
+## Использование
 
-1) Include file `MoySkladICMLParser.php`
+1) Выполните include файла `MoySkladICMLParser.php`
 
-2) Configure parser
+2) Сконфигурируйте парсер
 
 ```php
 $parser = new MoySkladICMLParser(
@@ -17,22 +17,26 @@ $parser = new MoySkladICMLParser(
 );
 ```
 
-3) Call `generateICML` method
+3) Вызовите метод `generateICML`
 
-See file `example.php` for simple usage example.
+```php
+$parser->generateICML();
+```
 
-## Options
+Смотрите файл `example.php` в качестве простого примера использования парсера.
 
-Options is array with next keys:
+## Дополнительные опции
 
-* `file` - filename with result icml without path (default: shopname.catalog.xml)
-* `directory` - target directory for icml file (default: current directory)
-* `ignoreOffers` - if `true` consignment from MoySklad will be ignored
-* `ignoreCategories` - string `'all'` or array with keys:
-  * `uuids` - array with GoodFolder `uuid` for ignore
-  * `externalCodes` - array with GoodFolder `externalcode` for ignore
-* `ignoreProducts` - array with keys:
-  * `uuids` - array with Good `uuid` for ignore (Consignment can't be ignore)
-  * `externalCodes` - array with Good `externalcode` for ignore (Consignment can't be ignore)
+Параметр $options - массив со следующими ключами:
 
-All options keys aren't required
+* `file` - Имя файла с итоговым icml без пути (по умолчанию: shopname.catalog.xml)
+* `directory` - Директория для итогового icml файла (по умолчанию: текущая директория)
+* `ignoreOffers` - Если `true` модификации товаров из МойСклад будут проигнорированы
+* `ignoreCategories` - Строка `'all'` или массив с ключами:
+  * `uuids` - Массив c `uuid` групп товаров, которые должны быть проигнорированы
+  * `externalCodes` - Массив c `внешними кодами` групп товаров, которые должны быть проигнорированы
+* `ignoreProducts` - Массив с ключами:
+  * `uuids` - Массив с `uuid` товаров, которые будут проигнорированы (Модификации товара проигнорировать нельзя)
+  * `externalCodes` - Массив с `внешними кодами` товаров, которые будут проигнорированы (Модификации товара проигнорировать нельзя)
+
+Все доступные опции не обязательны для использования
