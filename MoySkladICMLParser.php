@@ -13,6 +13,11 @@ class MoySkladICMLParser
     const TIMEOUT = 20;
 
     /**
+     * Шаг для выгрузки элементов в API
+     */
+    const STEP = 1000;
+
+    /**
      * Адрес для запроса товарных групп
      */
     const GROUP_LIST_URL = '/GoodFolder/list';
@@ -155,42 +160,53 @@ class MoySkladICMLParser
         $ignoreInfo = $this->getIgnoreProductGroupsInfo();
         $ignoreUuids = $ignoreInfo[self::UUIDS]; // сюда будут агрегироваться uuid для игнора с учетом вложеностей
 
-        $xml = $this->requestXml(self::GROUP_LIST_URL);
+        $start = 0;
+        $total = 0;
+        do {
+            $xml = $this->requestXml(self::GROUP_LIST_URL.'?'.http_build_query(['start' => $start]));
 
-        if ($xml) {
-            foreach ($xml->goodFolder as $goodFolder) {
-                $uuid = (string) $goodFolder->uuid;
-                $externalCode = (string) $goodFolder->externalcode;
-                $parentUuid = isset($goodFolder[0]['parentUuid']) ?
-                    (string) $goodFolder[0]['parentUuid'] : null;
+            if ($xml) {
 
-                // смотрим игноры
-                if (in_array($uuid, $ignoreInfo[self::UUIDS])) {
-                    continue;
-                } elseif (in_array($externalCode, $ignoreInfo[self::EXTERNAL_CODES])) {
-                    $ignoreUuids[] = $uuid;
-                    continue;
-                } elseif (
-                    $parentUuid
-                    && in_array($parentUuid, $ignoreUuids)
-                ) {
-                    $ignoreUuids[] = $uuid;
-                    continue;
+                $total = $xml[0]['total'];
+
+                foreach ($xml->goodFolder as $goodFolder) {
+                    $uuid = (string) $goodFolder->uuid;
+                    $externalCode = (string) $goodFolder->externalcode;
+                    $parentUuid = isset($goodFolder[0]['parentUuid']) ?
+                        (string) $goodFolder[0]['parentUuid'] : null;
+
+                    // смотрим игноры
+                    if (in_array($uuid, $ignoreInfo[self::UUIDS])) {
+                        continue;
+                    } elseif (in_array($externalCode, $ignoreInfo[self::EXTERNAL_CODES])) {
+                        $ignoreUuids[] = $uuid;
+                        continue;
+                    } elseif (
+                        $parentUuid
+                        && in_array($parentUuid, $ignoreUuids)
+                    ) {
+                        $ignoreUuids[] = $uuid;
+                        continue;
+                    }
+
+                    $category = array(
+                        'uuid' => $uuid,
+                        'name' => (string) $goodFolder[0]['name'],
+                        'externalCode' => $externalCode,
+                    );
+
+                    if (isset($goodFolder[0]['parentUuid'])) {
+                        $category['parentUuid'] = (string) $goodFolder[0]['parentUuid'];
+                    }
+
+                    $categories[$uuid] = $category;
                 }
-
-                $category = array(
-                    'uuid' => $uuid,
-                    'name' => (string) $goodFolder[0]['name'],
-                    'externalCode' => $externalCode,
-                );
-
-                if (isset($goodFolder[0]['parentUuid'])) {
-                    $category['parentUuid'] = (string) $goodFolder[0]['parentUuid'];
-                }
-
-                $categories[$uuid] = $category;
+            } else {
+                throw new RuntimeException('No xml');
             }
-        }
+
+            $start += self::STEP;
+        } while ($start < $total);
 
         $result = array();
         $this->sortGroupTree($result, $categories);
@@ -207,15 +223,25 @@ class MoySkladICMLParser
     {
         $vendors = array();
 
-        $xml = $this->requestXml(self::COMPANY_LIST_URL);
+        $start = 0;
+        $total = 0;
+        do {
+            $xml = $this->requestXml(self::COMPANY_LIST_URL.'?'.http_build_query(['start' => $start]));
 
-        if ($xml) {
-            foreach ($xml->company as $c) {
-                $uuid = (string) $c->uuid;
-                $name = (string) $c[0]['name'];
-                $vendors[$uuid] = $name;
+            if ($xml) {
+                $total = $xml[0]['total'];
+
+                foreach ($xml->company as $c) {
+                    $uuid = (string) $c->uuid;
+                    $name = (string) $c[0]['name'];
+                    $vendors[$uuid] = $name;
+                }
+            } else {
+                throw new RuntimeException('No xml');
             }
-        }
+
+            $start += self::STEP;
+        } while ($start < $total);
 
         return $vendors;
     }
@@ -233,58 +259,78 @@ class MoySkladICMLParser
     ) {
         $products = array();
 
-        $xml = $this->requestXml(self::PRODUCT_LIST_URL);
-        if ($xml) {
-            foreach ($xml->good as $v) {
-
-                $parentUuid = isset($v[0]['parentUuid']) ?
-                    (string) $v[0]['parentUuid'] : null;
-                $categoryId = $parentUuid && isset($categories[$parentUuid]) ?
-                    $categories[$parentUuid]['externalCode'] : '';
-                $vendorUuid = isset($v[0]['supplierUuid']) ?
-                    (string) $v[0]['supplierUuid'] : null;
-
-                $uuid = (string) $v->uuid;
-                $exCode = (string) $v->externalcode;
-                $products[$uuid] = array(
-                    'id' => $exCode, // тут либо externalcode либо uuid товара
-                    'exCode' => $exCode, // сюда пишем externalcode
-                    'name' => (string) $v[0]['name'],
-                    'price' => ((int) $v[0]['salePrice']) / 100,
-                    'purchasePrice' => ((int) $v[0]['buyPrice']) / 100,
-                    'article' => (string) $v[0]['productCode'],
-                    'vendor' => $vendorUuid && isset($vendors[$vendorUuid]) ?
-                        $vendors[$vendorUuid] : '',
-                    'categoryId' => $categoryId,
-                    'offers' => array(),
-                );
-            }
-        }
-
-        if (!$this->isIgnoreOffers()) {
-            $xml = $this->requestXml(self::OFFER_LIST_URL);
+        $start = 0;
+        $total = 0;
+        do {
+            $xml = $this->requestXml(self::PRODUCT_LIST_URL.'?'.http_build_query(['start' => $start]));
             if ($xml) {
-                foreach ($xml->consignment as $c) {
-                    // если нет feature, то товар без торговых предложений
-                    if (!isset($c->feature)) {
-                        continue;
-                    }
+                $total = $xml[0]['total'];
 
-                    $exCode = (string)$c->feature->externalcode;
-                    $name = (string)$c[0]['name'];
-                    $pid = (string)$c[0]['goodUuid'];
+                foreach ($xml->good as $v) {
 
-                    if (isset($products[$pid])) {
-                        $products[$pid]['offers'][$exCode] = array(
-                            'id' => $products[$pid]['exCode'] . '#' . $exCode,
-                            'name' => $name,
-                        );
-                    } else {
-                        // иначе это не товар а услуга (service)
+                    $parentUuid = isset($v[0]['parentUuid']) ?
+                        (string) $v[0]['parentUuid'] : null;
+                    $categoryId = $parentUuid && isset($categories[$parentUuid]) ?
+                        $categories[$parentUuid]['externalCode'] : '';
+                    $vendorUuid = isset($v[0]['supplierUuid']) ?
+                        (string) $v[0]['supplierUuid'] : null;
+
+                    $uuid = (string) $v->uuid;
+                    $exCode = (string) $v->externalcode;
+                    $products[$uuid] = array(
+                        'id' => $exCode, // тут либо externalcode либо uuid товара
+                        'exCode' => $exCode, // сюда пишем externalcode
+                        'name' => (string) $v[0]['name'],
+                        'price' => ((int) $v[0]['salePrice']) / 100,
+                        'purchasePrice' => ((int) $v[0]['buyPrice']) / 100,
+                        'article' => (string) $v[0]['productCode'],
+                        'vendor' => $vendorUuid && isset($vendors[$vendorUuid]) ?
+                            $vendors[$vendorUuid] : '',
+                        'categoryId' => $categoryId,
+                        'offers' => array(),
+                    );
+                }
+            } else {
+                throw new RuntimeException('No xml');
+            }
+
+            $start += self::STEP;
+        } while ($start < $total);
+
+        $start = 0;
+        $total = 0;
+        do {
+            if (!$this->isIgnoreOffers()) {
+                $xml = $this->requestXml(self::OFFER_LIST_URL.'?'.http_build_query(['start' => $start]));
+                if ($xml) {
+                    $total = $xml[0]['total'];
+
+                    foreach ($xml->consignment as $c) {
+                        // если нет feature, то товар без торговых предложений
+                        if (!isset($c->feature)) {
+                            continue;
+                        }
+
+                        $exCode = (string)$c->feature->externalcode;
+                        $name = (string)$c[0]['name'];
+                        $pid = (string)$c[0]['goodUuid'];
+
+                        if (isset($products[$pid])) {
+                            $products[$pid]['offers'][$exCode] = array(
+                                'id' => $products[$pid]['exCode'] . '#' . $exCode,
+                                'name' => $name,
+                            );
+                        } else {
+                            // иначе это не товар а услуга (service)
+                        }
                     }
+                } else {
+                    throw new RuntimeException('No xml');
                 }
             }
-        }
+
+            $start += self::STEP;
+        } while ($start < $total);
 
         // для товаров без торговых преложений
         foreach ($products as $key1 => &$product) {
