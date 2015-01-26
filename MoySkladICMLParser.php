@@ -401,15 +401,8 @@ class MoySkladICMLParser
 
         $ch = curl_init();
 
-        $securityStr = base64_encode($this->login.':'.$this->pass);
         curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt(
-            $ch,
-            CURLOPT_HTTPHEADER,
-            array(
-                "Authorization: Basic ".$securityStr."\r\n", // авторизация
-            )
-        );
+        curl_setopt($ch, CURLOPT_USERPWD, $this->login . ':' . $this->pass);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); // возвращаем результат
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, self::TIMEOUT);
 
