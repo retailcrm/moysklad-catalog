@@ -237,7 +237,7 @@ class MoySkladICMLParser
                     $vendors[$uuid] = $name;
                 }
             } else {
-                throw new RuntimeException('No xml');
+                throw new RuntimeException('No  - ' . $this->shop);
             }
 
             $start += self::STEP;
