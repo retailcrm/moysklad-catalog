@@ -202,7 +202,7 @@ class MoySkladICMLParser
                     $categories[$uuid] = $category;
                 }
             } else {
-                throw new RuntimeException('No xml');
+                throw new RuntimeException('No xml - ' . $this->shop);
             }
 
             $start += self::STEP;
@@ -237,7 +237,7 @@ class MoySkladICMLParser
                     $vendors[$uuid] = $name;
                 }
             } else {
-                throw new RuntimeException('No xml');
+                throw new RuntimeException('No xml - ' . $this->shop);
             }
 
             $start += self::STEP;
@@ -291,7 +291,7 @@ class MoySkladICMLParser
                     );
                 }
             } else {
-                throw new RuntimeException('No xml');
+                throw new RuntimeException('No xml - ' . $this->shop);
             }
 
             $start += self::STEP;
@@ -325,7 +325,7 @@ class MoySkladICMLParser
                         }
                     }
                 } else {
-                    throw new RuntimeException('No xml');
+                    throw new RuntimeException('No xml - ' . $this->shop);
                 }
             }
 
