@@ -556,6 +556,14 @@ class MoySkladICMLParser
                 if ($product['vendor']) {
                     $this->icmlAdd($offerXml, 'vendor', $product['vendor']);
                 }
+
+                if (isset($product['url'])) {
+                    $this->icmlAdd($offerXml, 'url', $product['url']);
+                }
+
+                if (isset($product['picture'])) {
+                    $this->icmlAdd($offerXml, 'picture', $product['picture']);
+                }
             }
         }
 
