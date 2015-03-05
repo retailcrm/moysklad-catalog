@@ -58,3 +58,4 @@ $parser->generateICML();
 * `Название` - RetailCrmPicture
 * `Тип` - Строка
 
+![settings](https://raw.githubusercontent.com/dmamontov/moyskad-catalog/master/doc/settings/settings.png)
