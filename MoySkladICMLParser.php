@@ -163,7 +163,7 @@ class MoySkladICMLParser
         $start = 0;
         $total = 0;
         do {
-            $xml = $this->requestXml(self::GROUP_LIST_URL.'?'.http_build_query(['start' => $start]));
+            $xml = $this->requestXml(self::GROUP_LIST_URL.'?'.http_build_query(array('start' => $start)));
 
             if ($xml) {
 
@@ -226,7 +226,7 @@ class MoySkladICMLParser
         $start = 0;
         $total = 0;
         do {
-            $xml = $this->requestXml(self::COMPANY_LIST_URL.'?'.http_build_query(['start' => $start]));
+            $xml = $this->requestXml(self::COMPANY_LIST_URL.'?'.http_build_query(array('start' => $start)));
 
             if ($xml) {
                 $total = $xml[0]['total'];
@@ -262,7 +262,7 @@ class MoySkladICMLParser
         $start = 0;
         $total = 0;
         do {
-            $xml = $this->requestXml(self::PRODUCT_LIST_URL.'?'.http_build_query(['start' => $start]));
+            $xml = $this->requestXml(self::PRODUCT_LIST_URL.'?'.http_build_query(array('start' => $start)));
             if ($xml) {
                 $total = $xml[0]['total'];
 
@@ -289,6 +289,24 @@ class MoySkladICMLParser
                         'categoryId' => $categoryId,
                         'offers' => array(),
                     );
+
+                    // Добавление изображений и url из кастомных свойств
+                    if (isset($v->attribute)) {
+                        foreach ($v->attribute as $attr) {
+                            if (isset($attr['valueString']) && stripos($attr['valueString'], 'http') !== false) {
+                                if (
+                                    stripos($attr['valueString'], '.jpg', 1) !== false ||
+                                    stripos($attr['valueString'], '.jpeg', 1) !== false ||
+                                    stripos($attr['valueString'], '.gif', 1) !== false ||
+                                    stripos($attr['valueString'], '.png', 1) !== false
+                                ) {
+                                    $products[$uuid]['picture'] = (string) $attr['valueString'];
+                                } else {
+                                    $products[$uuid]['url'] = (string) $attr['valueString'];
+                                }
+                            }
+                        }
+                    }
                 }
             } else {
                 throw new RuntimeException('No xml - ' . $this->shop);
@@ -301,7 +319,7 @@ class MoySkladICMLParser
         $total = 0;
         do {
             if (!$this->isIgnoreOffers()) {
-                $xml = $this->requestXml(self::OFFER_LIST_URL.'?'.http_build_query(['start' => $start]));
+                $xml = $this->requestXml(self::OFFER_LIST_URL.'?'.http_build_query(array('start' => $start)));
                 if ($xml) {
                     $total = $xml[0]['total'];
 
