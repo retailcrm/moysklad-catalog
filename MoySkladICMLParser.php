@@ -325,7 +325,7 @@ class MoySkladICMLParser
 
                     foreach ($xml->consignment as $c) {
                         // если нет feature, то товар без торговых предложений
-                        if (!isset($c->feature)) {
+                        if (!isset($c->feature) || !isset($c->feature->attribute)) {
                             continue;
                         }
 
