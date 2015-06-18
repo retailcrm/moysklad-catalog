@@ -281,8 +281,8 @@ class MoySkladICMLParser
                         'id' => $exCode, // тут либо externalcode либо uuid товара
                         'exCode' => $exCode, // сюда пишем externalcode
                         'name' => (string) $v[0]['name'],
-                        'price' => ((int) $v[0]['salePrice']) / 100,
-                        'purchasePrice' => ((int) $v[0]['buyPrice']) / 100,
+                        'price' => ((float) $v[0]['salePrice']) / 100,
+                        'purchasePrice' => ((float) $v[0]['buyPrice']) / 100,
                         'article' => (string) $v[0]['productCode'],
                         'vendor' => $vendorUuid && isset($vendors[$vendorUuid]) ?
                             $vendors[$vendorUuid] : '',
