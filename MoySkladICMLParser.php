@@ -13,11 +13,6 @@ class MoySkladICMLParser
     const IMGUR_URL = 'https://api.imgur.com/3/image.json';
 
     /**
-     * imgur client id
-     */
-    const IMGUR_CLIENT_ID = '042dcb6bf65b6fd';
-
-    /**
      * Таймаут в секундах
      */
     const TIMEOUT = 20;
@@ -148,7 +143,7 @@ class MoySkladICMLParser
 
         $products = $this->parseProducts($categories, $vendors);
 
-        if (isset($this->options['image']) && $this->options['image'] === true) {
+        if (isset($this->options['imgur']) && isset($this->options['imgur']['clientId'])) {
             $products = $this->uploadImage($products);
         }
 
@@ -165,40 +160,50 @@ class MoySkladICMLParser
      */
     protected function uploadImage($products)
     {
+        if (file_exists(__DIR__ . '/images') === false) {
+            @mkdir(__DIR__ . '/images');
+        }
+
         $uploaded = array();
-        if (file_exists(__DIR__ . "/images.json")) {
-            $uploaded = json_decode(file_get_contents(__DIR__ . "/images.json"), true);
+        if (file_exists(__DIR__ . "/images/{$this->shop}.json")) {
+            $uploaded = json_decode(file_get_contents(__DIR__ . "/images/{$this->shop}.json"), true);
         }
 
         foreach ($products as $id => $product) {
             if (isset($product['tmpPicture'])) {
-                if (isset($uploaded[$this->shop]) && isset($uploaded[$this->shop][$product['tmpPicture']['uuid']])) {
-                    $products[$id]['picture'] = $uploaded[$this->shop][$product['tmpPicture']['uuid']];
+                if (isset($uploaded) && isset($uploaded[$product['tmpPicture']['uuid']])) {
+                    $products[$id]['picture'] = $uploaded[$product['tmpPicture']['uuid']];
+                    unset($product['tmpPicture']);
                     continue;
                 }
+
+                $data = array(
+                    'image' => $product['tmpPicture']['contents'],
+                    'name'  => $product['tmpPicture']['filename']
+                );
 
                 $ch = curl_init();
                 curl_setopt($ch, CURLOPT_URL, self::IMGUR_URL);
                 curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-                curl_setopt($ch, CURLOPT_HTTPHEADER, array('Authorization: Client-ID ' . self::IMGUR_CLIENT_ID));
+                curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: Client-ID {$this->options['imgur']['clientId']}"));
                 curl_setopt($ch, CURLOPT_POST, true);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, array('image' => $product['tmpPicture']['contents']));
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
                 $result = curl_exec($ch);
                 curl_close($ch);
-                $result = json_decode($result, true);
+                $result = @json_decode($result, true);
 
                 if (isset($result['success']) && $result['success'] == true) {
                     $products[$id]['picture'] = $result['data']['link'];
-                    $uploaded[$this->shop][$product['tmpPicture']['uuid']] = $result['data']['link'];
+                    $uploaded[$product['tmpPicture']['uuid']] = $result['data']['link'];
                 }
                 unset($product['tmpPicture']);
             }
         }
 
         if (count($uploaded) > 0) {
-            file_put_contents(__DIR__ . "/images.json", json_encode($uploaded));
+            file_put_contents(__DIR__ . "/images/{$this->shop}.json", json_encode($uploaded));
         }
 
         return $products;
@@ -324,7 +329,7 @@ class MoySkladICMLParser
         $total = 0;
         do {
             $query = array('start' => $start);
-            if (isset($this->options['image']) && $this->options['image'] === true) {
+            if (isset($this->options['imgur'])) {
                 $query['fileContent'] = 'true';
             }
             $xml = $this->requestXml(self::PRODUCT_LIST_URL.'?'.http_build_query($query));
@@ -356,8 +361,7 @@ class MoySkladICMLParser
                     );
 
                     if (
-                        isset($this->options['image']) &&
-                        $this->options['image'] === true &&
+                        isset($this->options['imgur']) &&
                         isset($v->images) &&
                         isset($v->images->image) &&
                         isset($v->images->image->contents)
@@ -366,6 +370,10 @@ class MoySkladICMLParser
                             'uuid'     => (string) $v->images->image->uuid,
                             'contents' => (string) $v->images->image->contents
                         );
+
+                        if (isset($v->images->image['filename'])) {
+                            $products[$uuid]['tmpPicture']['filename'] = $v->images->image['filename'];
+                        }
                     }
 
                 }
