@@ -357,6 +357,9 @@ class MoySkladICMLParser
                         'vendor' => $vendorUuid && isset($vendors[$vendorUuid]) ?
                             $vendors[$vendorUuid] : '',
                         'categoryId' => $categoryId,
+                        'url' => "https://online.moysklad.ru/app/#good/edit?id={$uuid}",
+                        'code' => (string) $v->code,
+                        'weight' => (string) $v[0]['weight'],
                         'offers' => array(),
                     );
 
@@ -619,7 +622,20 @@ class MoySkladICMLParser
 
                 if ($product['article']) {
                     $art = $this->icmlAdd($offerXml, 'param', $product['article']);
-                    $art->addAttribute('name', 'article');
+                    $art->addAttribute('code', 'article');
+                    $art->addAttribute('name', 'Артикул');
+                }
+
+                if ($product['weight']) {
+                    $wei = $this->icmlAdd($offerXml, 'param', $product['weight']);
+                    $wei->addAttribute('code', 'weight');
+                    $wei->addAttribute('name', 'Вес');
+                }
+
+                if ($product['code']) {
+                    $cod = $this->icmlAdd($offerXml, 'param', $product['code']);
+                    $cod->addAttribute('code', 'code');
+                    $cod->addAttribute('name', 'Код');
                 }
 
                 if ($product['vendor']) {
