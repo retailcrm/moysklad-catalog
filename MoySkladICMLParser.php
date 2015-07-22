@@ -8,6 +8,11 @@ class MoySkladICMLParser
     const BASE_URL = 'https://online.moysklad.ru/exchange/rest/ms/xml';
 
     /**
+    * imgur url
+    */
+    const IMGUR_URL = 'https://api.imgur.com/3/image.json';
+
+    /**
      * Таймаут в секундах
      */
     const TIMEOUT = 20;
@@ -138,9 +143,70 @@ class MoySkladICMLParser
 
         $products = $this->parseProducts($categories, $vendors);
 
+        if (isset($this->options['imgur']) && isset($this->options['imgur']['clientId'])) {
+            $products = $this->uploadImage($products);
+        }
+
         $icml = $this->createICML($products, $categories);
 
         $icml->asXML($this->getFilePath());
+    }
+
+    /**
+     * Загружаем изображения
+     *
+     * @param array $products
+     * @return array
+     */
+    protected function uploadImage($products)
+    {
+        if (file_exists(__DIR__ . '/images') === false) {
+            @mkdir(__DIR__ . '/images');
+        }
+
+        $uploaded = array();
+        if (file_exists(__DIR__ . "/images/{$this->shop}.json")) {
+            $uploaded = json_decode(file_get_contents(__DIR__ . "/images/{$this->shop}.json"), true);
+        }
+
+        foreach ($products as $id => $product) {
+            if (isset($product['tmpPicture'])) {
+                if (isset($uploaded) && isset($uploaded[$product['tmpPicture']['uuid']])) {
+                    $products[$id]['picture'] = $uploaded[$product['tmpPicture']['uuid']];
+                    unset($product['tmpPicture']);
+                    continue;
+                }
+
+                $data = array(
+                    'image' => $product['tmpPicture']['contents'],
+                    'name'  => $product['tmpPicture']['filename']
+                );
+
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, self::IMGUR_URL);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: Client-ID {$this->options['imgur']['clientId']}"));
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+                $result = curl_exec($ch);
+                curl_close($ch);
+                $result = @json_decode($result, true);
+
+                if (isset($result['success']) && $result['success'] == true) {
+                    $products[$id]['picture'] = $result['data']['link'];
+                    $uploaded[$product['tmpPicture']['uuid']] = $result['data']['link'];
+                }
+                unset($product['tmpPicture']);
+            }
+        }
+
+        if (count($uploaded) > 0) {
+            file_put_contents(__DIR__ . "/images/{$this->shop}.json", json_encode($uploaded));
+        }
+
+        return $products;
     }
 
     /**
@@ -262,7 +328,11 @@ class MoySkladICMLParser
         $start = 0;
         $total = 0;
         do {
-            $xml = $this->requestXml(self::PRODUCT_LIST_URL.'?'.http_build_query(array('start' => $start)));
+            $query = array('start' => $start);
+            if (isset($this->options['imgur'])) {
+                $query['fileContent'] = 'true';
+            }
+            $xml = $this->requestXml(self::PRODUCT_LIST_URL.'?'.http_build_query($query));
             if ($xml) {
                 $total = $xml[0]['total'];
 
@@ -287,26 +357,28 @@ class MoySkladICMLParser
                         'vendor' => $vendorUuid && isset($vendors[$vendorUuid]) ?
                             $vendors[$vendorUuid] : '',
                         'categoryId' => $categoryId,
+                        'url' => "https://online.moysklad.ru/app/#good/edit?id={$uuid}",
+                        'code' => (string) $v->code,
+                        'weight' => (string) $v[0]['weight'],
                         'offers' => array(),
                     );
 
-                    // Добавление изображений и url из кастомных свойств
-                    if (isset($v->attribute)) {
-                        foreach ($v->attribute as $attr) {
-                            if (isset($attr['valueString']) && stripos($attr['valueString'], 'http') !== false) {
-                                if (
-                                    stripos($attr['valueString'], '.jpg', 1) !== false ||
-                                    stripos($attr['valueString'], '.jpeg', 1) !== false ||
-                                    stripos($attr['valueString'], '.gif', 1) !== false ||
-                                    stripos($attr['valueString'], '.png', 1) !== false
-                                ) {
-                                    $products[$uuid]['picture'] = (string) $attr['valueString'];
-                                } else {
-                                    $products[$uuid]['url'] = (string) $attr['valueString'];
-                                }
-                            }
+                    if (
+                        isset($this->options['imgur']) &&
+                        isset($v->images) &&
+                        isset($v->images->image) &&
+                        isset($v->images->image->contents)
+                    ) {
+                        $products[$uuid]['tmpPicture'] = array(
+                            'uuid'     => (string) $v->images->image->uuid,
+                            'contents' => (string) $v->images->image->contents
+                        );
+
+                        if (isset($v->images->image['filename'])) {
+                            $products[$uuid]['tmpPicture']['filename'] = $v->images->image['filename'];
                         }
                     }
+
                 }
             } else {
                 throw new RuntimeException('No xml - ' . $this->shop);
@@ -550,7 +622,20 @@ class MoySkladICMLParser
 
                 if ($product['article']) {
                     $art = $this->icmlAdd($offerXml, 'param', $product['article']);
-                    $art->addAttribute('name', 'article');
+                    $art->addAttribute('code', 'article');
+                    $art->addAttribute('name', 'Артикул');
+                }
+
+                if ($product['weight']) {
+                    $wei = $this->icmlAdd($offerXml, 'param', $product['weight']);
+                    $wei->addAttribute('code', 'weight');
+                    $wei->addAttribute('name', 'Вес');
+                }
+
+                if ($product['code']) {
+                    $cod = $this->icmlAdd($offerXml, 'param', $product['code']);
+                    $cod->addAttribute('code', 'code');
+                    $cod->addAttribute('name', 'Код');
                 }
 
                 if ($product['vendor']) {
