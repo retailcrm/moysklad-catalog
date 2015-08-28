@@ -121,7 +121,7 @@ class MoySkladICMLParser
      *      ]
      *
      *      // игнорирование товаров без категорий
-     *      'ignoreNoCategoryOffers' => 'true'
+     *      'ignoreNoCategoryOffers' => true
      */
     public function __construct(
         $login,
