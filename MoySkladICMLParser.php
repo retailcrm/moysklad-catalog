@@ -119,6 +119,9 @@ class MoySkladICMLParser
      *          // (именно товар, модификации игнорить нельзя)
      *          'externalCodes' => array,
      *      ]
+     *
+     *      // игнорирование товаров без категорий
+     *      'ignoreNoCategoryOffers' => 'true'
      */
     public function __construct(
         $login,
@@ -327,6 +330,9 @@ class MoySkladICMLParser
 
         $start = 0;
         $total = 0;
+
+        $ignoreNoCategoryOffers = isset($this->options['ignoreNoCategoryOffers']) && $this->options['ignoreNoCategoryOffers'];
+
         do {
             $query = array('start' => $start);
             if (isset($this->options['imgur'])) {
@@ -342,6 +348,11 @@ class MoySkladICMLParser
                         (string) $v[0]['parentUuid'] : null;
                     $categoryId = $parentUuid && isset($categories[$parentUuid]) ?
                         $categories[$parentUuid]['externalCode'] : '';
+
+                    if (! $categoryId && $ignoreNoCategoryOffers) {
+                        continue;
+                    }
+
                     $vendorUuid = isset($v[0]['supplierUuid']) ?
                         (string) $v[0]['supplierUuid'] : null;
 
