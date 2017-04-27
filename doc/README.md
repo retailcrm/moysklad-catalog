@@ -27,12 +27,9 @@ Options is array with next keys:
 
 * `file` - filename with result icml without path (default: shopname.catalog.xml)
 * `directory` - target directory for icml file (default: current directory)
-* `ignoreOffers` - if `true` consignment from MoySklad will be ignored
-* `ignoreCategories` - string `'all'` or array with keys:
-  * `uuids` - array with GoodFolder `uuid` for ignore
+* `ignoreCategories` - array with keys:
+  * `ids` - array with GoodFolder `id` for ignore
   * `externalCodes` - array with GoodFolder `externalcode` for ignore
-* `ignoreProducts` - array with keys:
-  * `uuids` - array with Good `uuid` for ignore (Consignment can't be ignore)
-  * `externalCodes` - array with Good `externalcode` for ignore (Consignment can't be ignore)
+* `ignoreNoCategoryOffers` - If `true` goods that do not belong to any category are ignored
 
 All options keys aren't required
