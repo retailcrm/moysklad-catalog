@@ -334,10 +334,10 @@ class MoySkladICMLParser
                         $products[$assortiment['id']]['unit'] ='';
                     }
 
-                    if (isset($assortiment['effectiveVat'])){
-                        $products[$assortiment['id']]['effectiveVat'] = (string) $assortiment['effectiveVat'];
-                    } elseif (isset($assortiment['product']['effectiveVat'])){
-                        $products[$assortiment['id']]['effectiveVat'] = (string) $assortiment['product']['effectiveVat'];
+                    if (isset($assortiment['effectiveVat']) && $assortiment['effectiveVat'] != 0){
+                        $products[$assortiment['id']]['effectiveVat'] = $assortiment['effectiveVat'];
+                    } elseif (isset($assortiment['product']['effectiveVat']) && $assortiment['product']['effectiveVat'] != 0){
+                        $products[$assortiment['id']]['effectiveVat'] = $assortiment['product']['effectiveVat'];
                     } else {
                         $products[$assortiment['id']]['effectiveVat'] = 'none';
                     }
