@@ -10,7 +10,7 @@ class MoySkladICMLParser
     /**
      * развернутые ссылки в запросе
      */
-    const ASSORTIMENT_EXPAND = 'product,productFolder,product.productFolder,supplier,product.supplier';
+    const ASSORTIMENT_EXPAND = 'product,productFolder,product.productFolder,supplier,product.supplier,uom,product.uom';
 
     /**
      * Таймаут в секундах
@@ -217,7 +217,7 @@ class MoySkladICMLParser
      */
     protected function parseAssortiment()
     {
-        $product = array();
+        $products = array();
 
         $offset = 0;
         $end = null;
@@ -258,23 +258,21 @@ class MoySkladICMLParser
                         }
                     }
 
-                    if (isset($ignoreCategories['externalCode']) && is_array($ignoreCategories['externalCode'])){
+                    if (isset($ignoreCategories['externalCode']) && is_array($ignoreCategories['externalCode'])) {
 
-                        if (!empty($assortiment['productFolder']['externalCode'])){
-                            if (in_array($assortiment['productFolder']['externalCode'],$ignoreCategories['externalCode'])){
+                        if (!empty($assortiment['productFolder']['externalCode'])) {
+                            if (in_array($assortiment['productFolder']['externalCode'], $ignoreCategories['externalCode'])) {
                                 continue;
                             }
                         }
 
-                        if (!empty($assortiment['product']['productFolder']['externalCode'])){
-                            if (in_array($assortiment['product']['productFolder']['externalCode'],$ignoreCategories['externalCode'])){
+                        if (!empty($assortiment['product']['productFolder']['externalCode'])) {
+                            if (in_array($assortiment['product']['productFolder']['externalCode'], $ignoreCategories['externalCode'])) {
                                 continue;
                             }
                         }
                     }
 
-                    $url = isset($assortiment['product']['image']['meta']['href']) ?
-                            $assortiment['product']['image']['meta']['href'] : '';
                     if (isset($assortiment['product']['image']['meta']['href'])){
                         $url = $assortiment['product']['image']['meta']['href'];
                     } elseif (isset($assortiment['image']['meta']['href'])) {
@@ -320,6 +318,29 @@ class MoySkladICMLParser
                         ),
                     );
 
+                    if (isset($assortiment['uom'])){
+                        $products[$assortiment['id']]['unit'] = array (
+                            'code'=>$assortiment['uom']['code'],
+                            'name'=>$assortiment['uom']['name'],
+                            'description'=>$assortiment['uom']['description'],
+                        );
+                    }elseif (isset($assortiment['product']['uom'])){
+                        $products[$assortiment['id']]['unit'] = array (
+                            'code'=>$assortiment['product']['uom']['code'],
+                            'name'=>$assortiment['product']['uom']['name'],
+                            'description'=>$assortiment['product']['uom']['description'],
+                        );
+                    } else {
+                        $products[$assortiment['id']]['unit'] ='';
+                    }
+
+                    if (isset($assortiment['effectiveVat']) && $assortiment['effectiveVat'] != 0){
+                        $products[$assortiment['id']]['effectiveVat'] = $assortiment['effectiveVat'];
+                    } elseif (isset($assortiment['product']['effectiveVat']) && $assortiment['product']['effectiveVat'] != 0){
+                        $products[$assortiment['id']]['effectiveVat'] = $assortiment['product']['effectiveVat'];
+                    } else {
+                        $products[$assortiment['id']]['effectiveVat'] = 'none';
+                    }
                     if (isset($assortiment['productFolder']['externalCode'])){
                         $products[$assortiment['id']]['categoryId'] = $assortiment['productFolder']['externalCode'];
                     } elseif (isset($assortiment['product']['productFolder']['externalCode'])){
@@ -403,6 +424,14 @@ class MoySkladICMLParser
             $this->icmlAdd($offerXml, 'purchasePrice', number_format($product['purchasePrice'], 2, '.', ''));
             $this->icmlAdd($offerXml, 'name', $product['name']);
             $this->icmlAdd($offerXml, 'productName', $product['productName']);
+            $this->icmlAdd($offerXml, 'vatRate',$product['effectiveVat']);
+
+            if ($product['unit'] != '') {
+                $unitXml = $offerXml->addChild('unit');
+                $unitXml->addAttribute('code', $product['unit']['code']);
+                $unitXml->addAttribute('name', $product['unit']['description']);
+                $unitXml->addAttribute('sym', $product['unit']['name']);
+            }
 
             if ($product['categoryId']) {
                     $this->icmlAdd($offerXml, 'categoryId', $product['categoryId']);
