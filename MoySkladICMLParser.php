@@ -149,40 +149,40 @@ class MoySkladICMLParser
         $offset = 0;
         $end = null;
         $ignoreCategories = $this->getIgnoreProductGroupsInfo();
-        if ($this->noCategory==true){
+        if ($this->noCategory==true) {
             $categories[0] = array(
                 'name' => 'warehouseRoot',
                 'externalCode' =>'warehouseRoot',
             );
         }
-        while (true){
+        while (true) {
             $response = $this->requestJson(self::FOLDER_LIST_URL.'?expand=productFolder&limit=100&offset='.$offset);
 
 
-            foreach ($response['rows'] as $folder){
-                if (isset($ignoreCategories['ids']) && is_array($ignoreCategories['ids'])){
-                    if (in_array($folder['id'],$ignoreCategories['id'])){
+            foreach ($response['rows'] as $folder) {
+                if (isset($ignoreCategories['ids']) && is_array($ignoreCategories['ids'])) {
+                    if (in_array($folder['id'],$ignoreCategories['id'])) {
                         continue;
                     }
-                    if (isset($folder['productFolder']['id'])){
-                        if (in_array($folder['productFolder']['id'],$ignoreCategories['ids'])){
+                    if (isset($folder['productFolder']['id'])) {
+                        if (in_array($folder['productFolder']['id'],$ignoreCategories['ids'])) {
                             continue;
                         }
                     }
                 }
 
-                if (isset($ignoreCategories['externalCode']) && is_array($ignoreCategories['externalCode'])){
-                    if (in_array($folder['externalCode'],$ignoreCategories['externalCode'])){
+                if (isset($ignoreCategories['externalCode']) && is_array($ignoreCategories['externalCode'])) {
+                    if (in_array($folder['externalCode'],$ignoreCategories['externalCode'])) {
                         continue;
                     }
-                    if (isset($folder['productFolder']['externalCode'])){
-                        if (in_array($folder['productFolder']['externalCode'],$ignoreCategories['externalCode'])){
+                    if (isset($folder['productFolder']['externalCode'])) {
+                        if (in_array($folder['productFolder']['externalCode'],$ignoreCategories['externalCode'])) {
                             continue;
                         }
                     }
                 }
 
-                if($folder['archived'] == false){
+                if($folder['archived'] == false) {
                     $categories[] =
                         array(
                             'name' => $folder['name'],
@@ -236,23 +236,23 @@ class MoySkladICMLParser
                             continue;
                         }
 
-                    if ($ignoreNoCategoryOffers === true){
+                    if ($ignoreNoCategoryOffers === true) {
 
                         if ( !isset($assortiment['productFolder']['externalCode']) &&
-                                !isset($assortiment['product']['productFolder']['externalCode']) ){
+                                !isset($assortiment['product']['productFolder']['externalCode']) ) {
                             continue;
                         }
 
                     }
 
-                    if (isset($ignoreCategories['ids']) && is_array($ignoreCategories['ids'])){
-                        if (!empty($assortiment['productFolder']['id'])){
-                            if (in_array($assortiment['productFolder']['id'],$ignoreCategories['ids'])){
+                    if (isset($ignoreCategories['ids']) && is_array($ignoreCategories['ids'])) {
+                        if (!empty($assortiment['productFolder']['id'])) {
+                            if (in_array($assortiment['productFolder']['id'],$ignoreCategories['ids'])) {
                                 continue;
                             }
                         }
-                        if (!empty($assortiment['product']['productFolder']['id'])){
-                            if (in_array($assortiment['product']['productFolder']['id'],$ignoreCategories['ids'])){
+                        if (!empty($assortiment['product']['productFolder']['id'])) {
+                            if (in_array($assortiment['product']['productFolder']['id'],$ignoreCategories['ids'])) {
                                 continue;
                             }
                         }
@@ -273,15 +273,15 @@ class MoySkladICMLParser
                         }
                     }
 
-                    if (isset($assortiment['product']['image']['meta']['href'])){
+                    if (isset($assortiment['product']['image']['meta']['href'])) {
                         $url = $assortiment['product']['image']['meta']['href'];
                     } elseif (isset($assortiment['image']['meta']['href'])) {
                         $url = $assortiment['image']['meta']['href'];
-                    }else {
+                    } else {
                         $url = '';
                     }
 
-                    if ($url !=''){
+                    if ($url != '') {
                         $image = $this->requestImage($url);
                     }
 
@@ -311,61 +311,61 @@ class MoySkladICMLParser
                             $assortiment['product']['externalCode'] . '#'. $assortiment['externalCode'] :
                             $assortiment['externalCode'],
 
-                        'image'=> array(
-                            'content'=>isset($image) ? $image : '',
+                        'image' => array(
+                            'content' => isset($image) ? $image : '',
                             'name' => isset($assortiment['product']['image']['filename']) ? $assortiment['product']['image']['filename'] : '',
-                            'id'=>$assortiment['id'],
+                            'id' => $assortiment['id'],
                         ),
                     );
 
-                    if (isset($assortiment['uom'])){
+                    if (isset($assortiment['uom']) && isset($assortiment['uom']['code'])) {
                         $products[$assortiment['id']]['unit'] = array (
-                            'code'=>$assortiment['uom']['code'],
-                            'name'=>$assortiment['uom']['name'],
-                            'description'=>$assortiment['uom']['description'],
+                            'code' => $assortiment['uom']['code'],
+                            'name' => $assortiment['uom']['name'],
+                            'description' => $assortiment['uom']['description'],
                         );
-                    }elseif (isset($assortiment['product']['uom'])){
+                    } elseif (isset($assortiment['product']['uom']) && isset($assortiment['product']['uom']['code'])) {
                         $products[$assortiment['id']]['unit'] = array (
-                            'code'=>$assortiment['product']['uom']['code'],
-                            'name'=>$assortiment['product']['uom']['name'],
-                            'description'=>$assortiment['product']['uom']['description'],
+                            'code' => $assortiment['product']['uom']['code'],
+                            'name' => $assortiment['product']['uom']['name'],
+                            'description' => $assortiment['product']['uom']['description'],
                         );
                     } else {
-                        $products[$assortiment['id']]['unit'] ='';
+                        $products[$assortiment['id']]['unit'] = '';
                     }
 
-                    if (isset($assortiment['effectiveVat']) && $assortiment['effectiveVat'] != 0){
+                    if (isset($assortiment['effectiveVat']) && $assortiment['effectiveVat'] != 0) {
                         $products[$assortiment['id']]['effectiveVat'] = $assortiment['effectiveVat'];
-                    } elseif (isset($assortiment['product']['effectiveVat']) && $assortiment['product']['effectiveVat'] != 0){
+                    } elseif (isset($assortiment['product']['effectiveVat']) && $assortiment['product']['effectiveVat'] != 0) {
                         $products[$assortiment['id']]['effectiveVat'] = $assortiment['product']['effectiveVat'];
                     } else {
                         $products[$assortiment['id']]['effectiveVat'] = 'none';
                     }
-                    if (isset($assortiment['productFolder']['externalCode'])){
+                    if (isset($assortiment['productFolder']['externalCode'])) {
                         $products[$assortiment['id']]['categoryId'] = $assortiment['productFolder']['externalCode'];
-                    } elseif (isset($assortiment['product']['productFolder']['externalCode'])){
+                    } elseif (isset($assortiment['product']['productFolder']['externalCode'])) {
                         $products[$assortiment['id']]['categoryId'] = $assortiment['product']['productFolder']['externalCode'];
                     } else {
                         $products[$assortiment['id']]['categoryId'] = '';
                     }
 
-                    if (isset($assortiment['article'])){
+                    if (isset($assortiment['article'])) {
                         $products[$assortiment['id']]['article'] = (string) $assortiment['article'];
-                    } elseif (isset($assortiment['product']['article'])){
+                    } elseif (isset($assortiment['product']['article'])) {
                         $products[$assortiment['id']]['article'] = (string) $assortiment['product']['article'];
                     } else {
                         $products[$assortiment['id']]['article'] = '';
                     }
 
-                    if (isset($assortiment['product']['supplier']['name'])){
+                    if (isset($assortiment['product']['supplier']['name'])) {
                         $products[$assortiment['id']]['vendor'] = $assortiment['product']['supplier']['name'];
-                    } elseif (isset($assortiment['supplier']['name'])){
+                    } elseif (isset($assortiment['supplier']['name'])) {
                         $products[$assortiment['id']]['vendor'] = $assortiment['supplier']['name'];
                     } else {
                         $products[$assortiment['id']]['vendor'] = '';
                     }
 
-                    if ($products[$assortiment['id']]['categoryId'] == null){
+                    if ($products[$assortiment['id']]['categoryId'] == null) {
                         $this->noCategory = true;
                     }
                     unset($image);
@@ -407,7 +407,7 @@ class MoySkladICMLParser
                 $categoryXml = $this->icmlAdd($categoriesXml, 'category', $category['name']);
                 $categoryXml->addAttribute('id', $category['externalCode']);
 
-                if (!empty($category['parentId'])){
+                if (!empty($category['parentId'])) {
                     $categoryXml->addAttribute('parentId',$category['parentId']);
                 }
             }
@@ -512,18 +512,18 @@ class MoySkladICMLParser
      */
     protected function getIgnoreProductGroupsInfo()
     {
-        //var_dump($this->options['ignoreCategories']);
-        if (!isset($this->options['ignoreCategories']) || !is_array($this->options['ignoreCategories'])){
+
+        if (!isset($this->options['ignoreCategories']) || !is_array($this->options['ignoreCategories'])) {
             $info = array();
         } else {
             $info = $this->options['ignoreCategories'];
         }
 
-        if (!isset($info['id']) || !is_array($info['id'])){
+        if (!isset($info['id']) || !is_array($info['id'])) {
             $info['id'] = array();
         }
 
-        if (!isset($info['externalCode']) || !is_array($info['externalCode'])){
+        if (!isset($info['externalCode']) || !is_array($info['externalCode'])) {
             $info['externalCode'] = array();
         }
 
