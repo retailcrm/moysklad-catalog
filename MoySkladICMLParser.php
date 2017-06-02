@@ -404,7 +404,7 @@ class MoySkladICMLParser
         if (count($categories)) {
             $categoriesXml = $this->icmlAdd($xml->shop, 'categories', '');
             foreach ($categories as $category) {
-                $categoryXml = $this->icmlAdd($categoriesXml, 'category', $category['name']);
+                $categoryXml = $this->icmlAdd($categoriesXml, 'category', htmlspecialchars($category['name']));
                 $categoryXml->addAttribute('id', $category['externalCode']);
 
                 if (!empty($category['parentId'])) {
@@ -422,8 +422,8 @@ class MoySkladICMLParser
             $this->icmlAdd($offerXml, 'xmlId', $product['xmlId']);
             $this->icmlAdd($offerXml, 'price', number_format($product['price'], 2, '.', ''));
             $this->icmlAdd($offerXml, 'purchasePrice', number_format($product['purchasePrice'], 2, '.', ''));
-            $this->icmlAdd($offerXml, 'name', $product['name']);
-            $this->icmlAdd($offerXml, 'productName', $product['productName']);
+            $this->icmlAdd($offerXml, 'name', htmlspecialchars($product['name']));
+            $this->icmlAdd($offerXml, 'productName', htmlspecialchars($product['productName']));
             $this->icmlAdd($offerXml, 'vatRate',$product['effectiveVat']);
 
             if ($product['unit'] != '') {
