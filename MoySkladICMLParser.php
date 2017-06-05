@@ -286,7 +286,9 @@ class MoySkladICMLParser
                     }
 
                     $products[$assortiment['id']] = array(
-                        'id' => $assortiment['id'],
+                        'id' => !empty($assortiment['product']['externalCode']) ?
+                            ($assortiment['product']['externalCode'] . '#' . $assortiment['externalCode']) :
+                            $assortiment['externalCode'],
                         'exCode' => $assortiment['externalCode'],
                         'productId' => isset($assortiment['product']['externalCode']) ?
                             $assortiment['product']['externalCode'] : $assortiment['externalCode'],
@@ -294,12 +296,12 @@ class MoySkladICMLParser
                         'productName'=> isset($assortiment['product']['name'])?
                             $assortiment['product']['name'] : $assortiment['name'],
                         'price' => isset($assortiment['salePrices'][0]['value']) ?
-                            ((float)$assortiment['salePrices'][0]['value']) / 100 :
-                            ((float)$assortiment['product']['salePrices'][0]['value']) / 100,
+                            (((float)$assortiment['salePrices'][0]['value']) / 100) :
+                            (((float)$assortiment['product']['salePrices'][0]['value']) / 100),
 
                         'purchasePrice' => isset($assortiment['buyPrice']['value']) ?
-                            ((float)$assortiment['buyPrice']['value']) / 100 :
-                            ((float)$assortiment['product']['buyPrice']['value']) / 100,
+                            (((float)$assortiment['buyPrice']['value']) / 100) :
+                            (((float)$assortiment['product']['buyPrice']['value']) / 100),
 
                         'weight' => isset($assortiment['weight']) ?
                             $assortiment['weight'] :
@@ -308,7 +310,7 @@ class MoySkladICMLParser
                         'code' => isset($assortiment['code']) ? (string) $assortiment['code'] : '',
 
                         'xmlId' => !empty($assortiment['product']['externalCode']) ?
-                            $assortiment['product']['externalCode'] . '#'. $assortiment['externalCode'] :
+                            ($assortiment['product']['externalCode'] . '#' . $assortiment['externalCode']) :
                             $assortiment['externalCode'],
 
                         'image' => array(
