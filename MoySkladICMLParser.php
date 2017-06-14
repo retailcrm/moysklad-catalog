@@ -298,7 +298,6 @@ class MoySkladICMLParser
                         'price' => isset($assortiment['salePrices'][0]['value']) ?
                             (((float)$assortiment['salePrices'][0]['value']) / 100) :
                             (((float)$assortiment['product']['salePrices'][0]['value']) / 100),
-
                         'purchasePrice' => isset($assortiment['buyPrice']['value']) ?
                             (((float)$assortiment['buyPrice']['value']) / 100) :
                             (
@@ -306,22 +305,25 @@ class MoySkladICMLParser
                                 (((float)$assortiment['product']['buyPrice']['value']) / 100) :
                                 0
                             ),
-
                         'weight' => isset($assortiment['weight']) ?
                             $assortiment['weight'] :
                             $assortiment['product']['weight'],
-
                         'code' => isset($assortiment['code']) ? (string) $assortiment['code'] : '',
-
                         'xmlId' => !empty($assortiment['product']['externalCode']) ?
                             ($assortiment['product']['externalCode'] . '#' . $assortiment['externalCode']) :
                             $assortiment['externalCode'],
-
                         'image' => array(
                             'content' => isset($image) ? $image : '',
                             'name' => isset($assortiment['product']['image']['filename']) ? $assortiment['product']['image']['filename'] : '',
                             'id' => $assortiment['id'],
                         ),
+                        'url' => !empty($assortiment['product']['meta']['uuidHref']) ?
+                            $assortiment['product']['meta']['uuidHref'] :
+                            (
+                                !empty($assortiment['meta']['uuidHref']) ?
+                                $assortiment['meta']['uuidHref'] :
+                                ''
+                            )
                     );
 
                     if (isset($assortiment['uom']) && isset($assortiment['uom']['code'])) {
@@ -430,7 +432,11 @@ class MoySkladICMLParser
             $this->icmlAdd($offerXml, 'purchasePrice', number_format($product['purchasePrice'], 2, '.', ''));
             $this->icmlAdd($offerXml, 'name', htmlspecialchars($product['name']));
             $this->icmlAdd($offerXml, 'productName', htmlspecialchars($product['productName']));
-            $this->icmlAdd($offerXml, 'vatRate',$product['effectiveVat']);
+            $this->icmlAdd($offerXml, 'vatRate', $product['effectiveVat']);
+
+            if (!empty($product['url'])) {
+                $this->icmlAdd($offerXml, 'url', htmlspecialchars($product['url']));
+            }
 
             if ($product['unit'] != '') {
                 $unitXml = $offerXml->addChild('unit');
