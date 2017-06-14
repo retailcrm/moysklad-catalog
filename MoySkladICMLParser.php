@@ -301,7 +301,11 @@ class MoySkladICMLParser
 
                         'purchasePrice' => isset($assortiment['buyPrice']['value']) ?
                             (((float)$assortiment['buyPrice']['value']) / 100) :
-                            (((float)$assortiment['product']['buyPrice']['value']) / 100),
+                            (
+                                isset($assortiment['product']['buyPrice']['value']) ?
+                                (((float)$assortiment['product']['buyPrice']['value']) / 100) :
+                                0
+                            ),
 
                         'weight' => isset($assortiment['weight']) ?
                             $assortiment['weight'] :
