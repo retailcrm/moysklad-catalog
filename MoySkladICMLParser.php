@@ -232,7 +232,8 @@ class MoySkladICMLParser
             if ($response && $response['rows']) {
                 foreach ($response['rows'] as $assortiment) {
                    if (!empty($assortiment['modificationsCount']) ||
-                            $assortiment['meta']['type'] == 'service') {
+                            $assortiment['meta']['type'] == 'service' || 
+                            $assortiment['meta']['type'] == 'consignment') {
                             continue;
                         }
 
