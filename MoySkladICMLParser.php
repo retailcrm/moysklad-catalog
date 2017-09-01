@@ -281,11 +281,13 @@ class MoySkladICMLParser
                     } else {
                         $url = '';
                     }
-
-                    if ($url != '') {
-                        $image = $this->requestImage($url);
+                    
+                    if (!empty($this->options['imgur'])) {
+                        if ($url != '') {
+                            $image = $this->requestImage($url);
+                        }
                     }
-
+                    
                     $products[$assortiment['id']] = array(
                         'id' => !empty($assortiment['product']['externalCode']) ?
                             ($assortiment['product']['externalCode'] . '#' . $assortiment['externalCode']) :
@@ -559,6 +561,7 @@ class MoySkladICMLParser
         curl_setopt($curlHandler, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($curlHandler, CURLOPT_SSL_VERIFYHOST, false);
         curl_setopt($curlHandler, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curlHandler, CURLOPT_FOLLOWLOCATION, true);
         curl_setopt($curlHandler, CURLOPT_TIMEOUT, self::TIMEOUT);
         curl_setopt($curlHandler, CURLOPT_CONNECTTIMEOUT, 60);
         curl_setopt($curlHandler, CURLOPT_HTTPHEADER, array(
