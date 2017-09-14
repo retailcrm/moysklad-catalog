@@ -10,6 +10,7 @@ $parser = new MoySkladICMLParser(
     array(
         'directory' => __DIR__,
         'file' => 'test.xml',
+        'archivedGoods' => false,
     )
 );
 

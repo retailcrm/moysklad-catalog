@@ -101,8 +101,10 @@ class MoySkladICMLParser
         }
 
         $icml = $this->ICMLCreate($categories, $assortiment);
-
-        $icml->asXML($this->getFilePath());
+        
+        if (count($categories) > 0 && count($assortiment) > 0) {
+            $icml->asXML($this->getFilePath());
+        }
 
     }
 
@@ -221,13 +223,19 @@ class MoySkladICMLParser
 
         $offset = 0;
         $end = null;
+        $url = self::ASSORT_LIST_URL.'?expand='.self::ASSORTIMENT_EXPAND.'&limit='.self::LIMIT;
+
         $ignoreNoCategoryOffers = isset($this->options['ignoreNoCategoryOffers']) && $this->options['ignoreNoCategoryOffers'];
 
         $ignoreCategories = $this->getIgnoreProductGroupsInfo();
 
+        if (isset($this->options['archivedGoods']) && $this->options['archivedGoods'] === true) {
+            $url .= '&archived=All';
+        }
+
         while (true) {
 
-            $response = $this->requestJson(self::ASSORT_LIST_URL.'?expand='.self::ASSORTIMENT_EXPAND.'&limit='.self::LIMIT.'&offset='.$offset);
+            $response = $this->requestJson($url.'&offset='.$offset);
 
             if ($response && $response['rows']) {
                 foreach ($response['rows'] as $assortiment) {
