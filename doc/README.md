@@ -27,6 +27,7 @@ Options is array with next keys:
 
 * `file` - filename with result icml without path (default: shopname.catalog.xml)
 * `directory` - target directory for icml file (default: current directory)
+* `'archivedGoods'` - option for inclusion in the generation of archived goods and trade offers (takes the values ​​of `true` or` false`)
 * `ignoreCategories` - array with keys:
   * `ids` - array with GoodFolder `id` for ignore
   * `externalCodes` - array with GoodFolder `externalcode` for ignore

@@ -105,7 +105,6 @@ class MoySkladICMLParser
         if (count($categories) > 0 && count($assortiment) > 0) {
             $icml->asXML($this->getFilePath());
         }
-//        $icml->asXML($this->getFilePath());
 
     }
 
@@ -209,7 +208,7 @@ class MoySkladICMLParser
                 break;
             }
         }
-        $categories = array();
+
         return $categories;
     }
 
@@ -225,12 +224,12 @@ class MoySkladICMLParser
         $offset = 0;
         $end = null;
         $url = self::ASSORT_LIST_URL.'?expand='.self::ASSORTIMENT_EXPAND.'&limit='.self::LIMIT;
-        
+
         $ignoreNoCategoryOffers = isset($this->options['ignoreNoCategoryOffers']) && $this->options['ignoreNoCategoryOffers'];
 
         $ignoreCategories = $this->getIgnoreProductGroupsInfo();
 
-        if ($this->options['archivedGoods'] == true) {
+        if (isset($this->options['archivedGoods']) && $this->options['archivedGoods'] === true) {
             $url .= '&archived=All';
         }
 
