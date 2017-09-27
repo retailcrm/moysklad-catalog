@@ -281,18 +281,19 @@ class MoySkladICMLParser
                             }
                         }
                     }
-
-                    if (isset($assortiment['product']['image']['meta']['href'])) {
-                        $url = $assortiment['product']['image']['meta']['href'];
-                    } elseif (isset($assortiment['image']['meta']['href'])) {
-                        $url = $assortiment['image']['meta']['href'];
-                    } else {
-                        $url = '';
-                    }
                     
                     if (!empty($this->options['imgur'])) {
-                        if ($url != '') {
-                            $image = $this->requestImage($url);
+                        
+                        if (isset($assortiment['product']['image']['meta']['href'])) {
+                            $imageUrl = $assortiment['product']['image']['meta']['href'];
+                        } elseif (isset($assortiment['image']['meta']['href'])) {
+                            $imageUrl = $assortiment['image']['meta']['href'];
+                        } else {
+                            $imageUrl = '';
+                        }
+                    
+                        if ($imageUrl != '') {
+                            $image = $this->requestImage($imageUrl);
                         }
                     }
                     
