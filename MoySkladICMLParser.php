@@ -281,7 +281,7 @@ class MoySkladICMLParser
                             }
                         }
                     }
-                    
+
                     if (!empty($this->options['imgur'])) {
                         
                         if (isset($assortiment['product']['image']['meta']['href'])) {
