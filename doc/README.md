@@ -32,5 +32,8 @@ Options is array with next keys:
   * `ids` - array with GoodFolder `id` for ignore
   * `externalCodes` - array with GoodFolder `externalcode` for ignore
 * `ignoreNoCategoryOffers` - If `true` goods that do not belong to any category are ignored
+* `imageDownload` - an array containing information for loading images.
+  * `site` - the address of the site from where images will be given in retailCRM
+  * `pathToImage` - The path from the root of the site to the directory where images will be stored
 
 All options keys aren't required
