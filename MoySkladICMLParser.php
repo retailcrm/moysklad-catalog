@@ -396,7 +396,7 @@ class MoySkladICMLParser
                         $products[$assortiment['id']]['image']['imageUrl'] = $urlImage;
                         $products[$assortiment['id']]['image']['name'] = 
                                 isset($assortiment['image']['filename']) ? 
-                                $assortiment['image']['filename'] : $assortiment['id'].'.jpg';
+                                $assortiment['image']['filename'] : $assortiment['product']['image']['filename'];
                     }
                     
                 }
