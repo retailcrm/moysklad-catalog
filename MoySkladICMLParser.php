@@ -109,12 +109,11 @@ class MoySkladICMLParser
     }
 
     /**
-     * @param string $uri
+     * @param string $url
      * @return JSON
      */
-    protected function requestJson($uri)
+    protected function requestJson($url)
     {
-        $url = self::BASE_URL . $uri;
 
         $curlHandler = curl_init();
         curl_setopt($curlHandler, CURLOPT_USERPWD, $this->login . ':' . $this->pass);
@@ -125,6 +124,11 @@ class MoySkladICMLParser
         curl_setopt($curlHandler, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($curlHandler, CURLOPT_TIMEOUT, self::TIMEOUT);
         curl_setopt($curlHandler, CURLOPT_CONNECTTIMEOUT, 60);
+        
+        if (strripos($url, 'download')) {
+            curl_setopt($curlHandler, CURLOPT_FOLLOWLOCATION, 1);
+        }
+        
         curl_setopt($curlHandler, CURLOPT_HTTPHEADER, array(
                 'Content-Type: application/json'
             ));
@@ -134,6 +138,11 @@ class MoySkladICMLParser
 
         if ($result === false) {
             return null;
+        }
+
+        if (strripos($url, 'download')) {
+            
+            return $result;
         }
 
         $result = json_decode($result,true);
@@ -151,21 +160,23 @@ class MoySkladICMLParser
         $offset = 0;
         $end = null;
         $ignoreCategories = $this->getIgnoreProductGroupsInfo();
-        if ($this->noCategory==true) {
+        if ($this->noCategory == true) {
             $categories[0] = array(
                 'name' => 'warehouseRoot',
                 'externalCode' =>'warehouseRoot',
             );
         }
-        while (true) {
-            $response = $this->requestJson(self::FOLDER_LIST_URL.'?expand=productFolder&limit=100&offset='.$offset);
 
+        while (true) {
+            $response = $this->requestJson(self::BASE_URL . self::FOLDER_LIST_URL . '?expand=productFolder&limit=100&offset=' . $offset);
 
             foreach ($response['rows'] as $folder) {
                 if (isset($ignoreCategories['ids']) && is_array($ignoreCategories['ids'])) {
-                    if (in_array($folder['id'],$ignoreCategories['id'])) {
+                    
+                    if (in_array($folder['id'], $ignoreCategories['id'])) {
                         continue;
                     }
+                    
                     if (isset($folder['productFolder']['id'])) {
                         if (in_array($folder['productFolder']['id'],$ignoreCategories['ids'])) {
                             continue;
@@ -192,7 +203,6 @@ class MoySkladICMLParser
                             'parentId' => isset($folder['productFolder']) ?
                                 $folder['productFolder']['externalCode'] : '',
                         );
-
                 }
             }
 
@@ -223,7 +233,7 @@ class MoySkladICMLParser
 
         $offset = 0;
         $end = null;
-        $url = self::ASSORT_LIST_URL.'?expand='.self::ASSORTIMENT_EXPAND.'&limit='.self::LIMIT;
+        $url = self::BASE_URL . self::ASSORT_LIST_URL . '?expand=' . self::ASSORTIMENT_EXPAND . '&limit=' . self::LIMIT;
 
         $ignoreNoCategoryOffers = isset($this->options['ignoreNoCategoryOffers']) && $this->options['ignoreNoCategoryOffers'];
 
@@ -238,12 +248,14 @@ class MoySkladICMLParser
             $response = $this->requestJson($url.'&offset='.$offset);
 
             if ($response && $response['rows']) {
+
                 foreach ($response['rows'] as $assortiment) {
+
                    if (!empty($assortiment['modificationsCount']) ||
                             $assortiment['meta']['type'] == 'service' || 
                             $assortiment['meta']['type'] == 'consignment') {
                             continue;
-                        }
+                    }
 
                     if ($ignoreNoCategoryOffers === true) {
 
@@ -260,6 +272,7 @@ class MoySkladICMLParser
                                 continue;
                             }
                         }
+
                         if (!empty($assortiment['product']['productFolder']['id'])) {
                             if (in_array($assortiment['product']['productFolder']['id'],$ignoreCategories['ids'])) {
                                 continue;
@@ -282,21 +295,14 @@ class MoySkladICMLParser
                         }
                     }
 
-                    if (!empty($this->options['imgur'])) {
-                        
-                        if (isset($assortiment['product']['image']['meta']['href'])) {
-                            $imageUrl = $assortiment['product']['image']['meta']['href'];
-                        } elseif (isset($assortiment['image']['meta']['href'])) {
-                            $imageUrl = $assortiment['image']['meta']['href'];
-                        } else {
-                            $imageUrl = '';
-                        }
-                    
-                        if ($imageUrl != '') {
-                            $image = $this->requestImage($imageUrl);
-                        }
+                    if (isset($assortiment['product']['image']['meta']['href'])) {
+                        $urlImage = $assortiment['product']['image']['meta']['href'];
+                    } elseif (isset($assortiment['image']['meta']['href'])) {
+                        $urlImage = $assortiment['image']['meta']['href'];
+                    } else {
+                        $urlImage = '';
                     }
-                    
+
                     $products[$assortiment['id']] = array(
                         'id' => !empty($assortiment['product']['externalCode']) ?
                             ($assortiment['product']['externalCode'] . '#' . $assortiment['externalCode']) :
@@ -324,18 +330,14 @@ class MoySkladICMLParser
                         'xmlId' => !empty($assortiment['product']['externalCode']) ?
                             ($assortiment['product']['externalCode'] . '#' . $assortiment['externalCode']) :
                             $assortiment['externalCode'],
-                        'image' => array(
-                            'content' => isset($image) ? $image : '',
-                            'name' => isset($assortiment['product']['image']['filename']) ? $assortiment['product']['image']['filename'] : '',
-                            'id' => $assortiment['id'],
-                        ),
+
                         'url' => !empty($assortiment['product']['meta']['uuidHref']) ?
                             $assortiment['product']['meta']['uuidHref'] :
                             (
                                 !empty($assortiment['meta']['uuidHref']) ?
                                 $assortiment['meta']['uuidHref'] :
                                 ''
-                            )
+                            ),
                     );
 
                     if (isset($assortiment['uom']) && isset($assortiment['uom']['code'])) {
@@ -361,6 +363,7 @@ class MoySkladICMLParser
                     } else {
                         $products[$assortiment['id']]['effectiveVat'] = 'none';
                     }
+
                     if (isset($assortiment['productFolder']['externalCode'])) {
                         $products[$assortiment['id']]['categoryId'] = $assortiment['productFolder']['externalCode'];
                     } elseif (isset($assortiment['product']['productFolder']['externalCode'])) {
@@ -388,7 +391,14 @@ class MoySkladICMLParser
                     if ($products[$assortiment['id']]['categoryId'] == null) {
                         $this->noCategory = true;
                     }
-                    unset($image);
+                    
+                    if ($urlImage != '') {
+                        $products[$assortiment['id']]['image']['imageUrl'] = $urlImage;
+                        $products[$assortiment['id']]['image']['name'] = 
+                                isset($assortiment['image']['filename']) ? 
+                                $assortiment['image']['filename'] : $assortiment['id'].'.jpg';
+                    }
+                    
                 }
             }
 
@@ -421,6 +431,7 @@ class MoySkladICMLParser
         $date = new DateTime();
         $xmlstr = '<yml_catalog date="'.$date->format('Y-m-d H:i:s').'"><shop><name>'.$this->shop.'</name></shop></yml_catalog>';
         $xml = new SimpleXMLElement($xmlstr);
+
         if (count($categories)) {
             $categoriesXml = $this->icmlAdd($xml->shop, 'categories', '');
             foreach ($categories as $category) {
@@ -434,6 +445,7 @@ class MoySkladICMLParser
         }
 
         $offersXml = $this->icmlAdd($xml->shop, 'offers', '');
+
         foreach ($products as $product) {
             $offerXml = $offersXml->addChild('offer');
             $offerXml->addAttribute('id', $product['id']);
@@ -485,8 +497,11 @@ class MoySkladICMLParser
                     $this->icmlAdd($offerXml, 'vendor', $product['vendor']);
                 }
 
-            if (isset($product['image']['url'])) {
-                    $this->icmlAdd($offerXml, 'picture', $product['image']['url']);
+            if (isset($product['image']['imageUrl']) &&
+                    !empty($this->options['imageDownload']['pathToImage']) &&
+                    !empty($this->options['imageDownload']['site'])) 
+                {
+                    $this->icmlAdd($offerXml, 'picture', $this->saveImage($product['image']));
                 }
 
         }
@@ -501,11 +516,7 @@ class MoySkladICMLParser
      * @param string $value
      * @return SimpleXMLElement
      */
-    protected function icmlAdd(
-        SimpleXMLElement $xml,
-        $name,
-        $value
-    ) {
+    protected function icmlAdd(SimpleXMLElement $xml,$name, $value) {
 
         $elem = $xml->addChild($name, $value);
 
@@ -514,10 +525,11 @@ class MoySkladICMLParser
 
     /**
      * Возвращает имя ICML-файла
+     * 
      * @return string
      */
-    protected function getFilePath()
-    {
+    protected function getFilePath() {
+        
         $path = isset($this->options['directory']) && $this->options['directory'] ?
             $this->options['directory'] : __DIR__;
 
@@ -534,8 +546,7 @@ class MoySkladICMLParser
     /**
      * Получаем данные для игнорирования товарных групп
      */
-    protected function getIgnoreProductGroupsInfo()
-    {
+    protected function getIgnoreProductGroupsInfo() {
 
         if (!isset($this->options['ignoreCategories']) || !is_array($this->options['ignoreCategories'])) {
             $info = array();
@@ -555,92 +566,71 @@ class MoySkladICMLParser
     }
 
     /**
-     * Получаем изображения для товаров
-     *
-     * @param string $url
-     * @return jpg
+     * Сохранение изображения в дирректорию на сервере
+     * 
+     * @param array $image
+     * @return string
      */
-    protected function requestImage($url)
-    {
-
-        $curlHandler = curl_init();
-        curl_setopt($curlHandler, CURLOPT_USERPWD, $this->login . ':' . $this->pass);
-        curl_setopt($curlHandler, CURLOPT_URL, $url);
-        curl_setopt($curlHandler, CURLOPT_FAILONERROR, false);
-        curl_setopt($curlHandler, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($curlHandler, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($curlHandler, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curlHandler, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($curlHandler, CURLOPT_TIMEOUT, self::TIMEOUT);
-        curl_setopt($curlHandler, CURLOPT_CONNECTTIMEOUT, 60);
-        curl_setopt($curlHandler, CURLOPT_HTTPHEADER, array(
-                'Content-Type: application/json'
-            ));
-
-        $result = curl_exec($curlHandler);
-        curl_close($curlHandler);
-
-        if ($result === false) {
-            return null;
+    protected function saveImage(array $image) {
+        
+        $root = __DIR__;
+        $imgDirrectory = $this->options['imageDownload']['pathToImage'];
+        
+        if (substr($imgDirrectory, 0, 1) === '/')  {
+            $imgDirrectory = substr($imgDirrectory, 1);
         }
-
-        return $result;
-    }
-
-    /**
-     * Загружаем изображения
-     *
-     * @param array $products
-     * @return array $products
-     */
-    protected function uploadImage($products)
-    {
-        if (file_exists(__DIR__ . '/images') === false) {
-            @mkdir(__DIR__ . '/images');
+        
+        if (substr($imgDirrectory, -1) === '/') {
+            $imgDirrectory = substr($imgDirrectory, 0, -1);
         }
+        
+        $imgDirrectoryArray = explode('/', $imgDirrectory);
+        $root = stristr($root, $imgDirrectoryArray[0], true);
 
-        $uploaded = array();
-        if (file_exists(__DIR__ . "/images/{$this->shop}.json")) {
-            $uploaded = json_decode(file_get_contents(__DIR__ . "/images/{$this->shop}.json"), true);
+        if (file_exists($root . '/' . $imgDirrectory) === false) {
+            @mkdir($root . '/' . $imgDirrectory);
         }
-
-        foreach ($products as $id => $product) {
-            if (isset($product['image'])) {
-                if (isset($uploaded) && isset($uploaded[$product['image']['id']])) {
-                    $products[$id]['image']['url'] = $uploaded[$product['image']['id']];
-                    unset($product['image']);
-                    continue;
-                }
-
-                $data = array(
-                    'image' => $product['image']['content'],
-                    'name'  => $product['image']['name']
-                );
-
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, self::IMGUR_URL);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-                curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: Client-ID {$this->options['imgur']['clientId']}"));
-                curl_setopt($ch, CURLOPT_POST, true);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-                $result = curl_exec($ch);
-                curl_close($ch);
-                $result = @json_decode($result, true);
-
-                if (isset($result['success']) && $result['success'] == true) {
-                    $products[$id]['image']['url'] = $result['data']['link'];
-
-                }
-                unset($product['image']['content']);
+        
+        if (file_exists($root . $imgDirrectory . '/' . $image['name']) === false) {
+            $content = $this->requestJson($image['imageUrl']);
+            
+            if ($content) {
+                file_put_contents($root .  $imgDirrectory . '/' . $image['name'], $content);
             }
         }
 
-        if (count($uploaded) > 0) {
-            file_put_contents(__DIR__ . "/images/{$this->shop}.json", json_encode($uploaded));
+        $imageUrl = $this->linkGeneration($image['name']);
+
+        return $imageUrl;
+
+    }
+    /**
+     * Генерация ссылки на изображение
+     * 
+     * @param string $name
+     * @return string
+     */
+    protected function linkGeneration($name) {
+
+        if (empty($name)) { 
+            return false;
+        }
+        $path = $this->options['imageDownload']['pathToImage'];
+        
+        if (substr($path, 0, 1) === '/') {
+            $path = substr($path, 1); 
         }
 
-        return $products;
+        if (substr($path, -1) === '/') {
+            $path = substr($path, 0, -1);
+        }
+
+        $path = explode('/', $path);
+        unset($path[0]);
+        $path = implode('/', $path);
+
+        $link = $this->options['imageDownload']['site'] . '/' . $path . '/' . $name;
+
+        return $link;
     }
 }
