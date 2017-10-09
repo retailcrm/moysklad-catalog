@@ -18,11 +18,6 @@ class MoySkladICMLParser
     const TIMEOUT = 20;
 
     /**
-    * imgur url
-    */
-    const IMGUR_URL = 'https://api.imgur.com/3/image.json';
-
-    /**
      * Шаг для выгрузки элементов в API
      */
     const STEP = 100;
@@ -311,11 +306,8 @@ class MoySkladICMLParser
                         'productId' => isset($assortiment['product']['externalCode']) ?
                             $assortiment['product']['externalCode'] : $assortiment['externalCode'],
                         'name' => $assortiment['name'],
-                        'productName'=> isset($assortiment['product']['name'])?
+                        'productName'=> isset($assortiment['product']['name']) ?
                             $assortiment['product']['name'] : $assortiment['name'],
-                        'price' => isset($assortiment['salePrices'][0]['value']) ?
-                            (((float)$assortiment['salePrices'][0]['value']) / 100) :
-                            (((float)$assortiment['product']['salePrices'][0]['value']) / 100),
                         'purchasePrice' => isset($assortiment['buyPrice']['value']) ?
                             (((float)$assortiment['buyPrice']['value']) / 100) :
                             (
@@ -339,6 +331,14 @@ class MoySkladICMLParser
                                 ''
                             ),
                     );
+
+                    if (isset($assortiment['salePrices'][0]['value']) && $assortiment['salePrices'][0]['value'] != 0) {
+                        $products[$assortiment['id']]['price'] = (((float)$assortiment['salePrices'][0]['value']) / 100);
+                    } elseif (isset($assortiment['product']['salePrices'][0]['value'])) {
+                        $products[$assortiment['id']]['price'] = (((float)$assortiment['product']['salePrices'][0]['value']) / 100);
+                    } else {
+                        $products[$assortiment['id']]['price'] = ((float)0);
+                    }
 
                     if (isset($assortiment['uom']) && isset($assortiment['uom']['code'])) {
                         $products[$assortiment['id']]['unit'] = array (
