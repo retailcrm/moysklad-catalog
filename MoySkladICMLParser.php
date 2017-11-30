@@ -51,7 +51,7 @@ class MoySkladICMLParser
      * @var string $pass - пароль МойСклад
      */
     protected $pass;
-
+    
     /**
      * @var string $shop - имя магазина
      */
@@ -87,14 +87,15 @@ class MoySkladICMLParser
      */
     public function generateICML()
     {
+        
         $assortiment = $this->parseAssortiment();
 
-        $categories = $this->parserFolder();
-
-        if (isset($this->options['imgur']) && isset($this->options['imgur']['clientId'])) {
-            $assortiment = $this->uploadImage($assortiment);
+        if (count($assortiment) > 0) {
+            $categories = $this->parserFolder();
+        } else {
+            $categories = array();
         }
-
+        
         $icml = $this->ICMLCreate($categories, $assortiment);
         
         if (count($categories) > 0 && count($assortiment) > 0) {
@@ -119,7 +120,7 @@ class MoySkladICMLParser
         curl_setopt($curlHandler, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($curlHandler, CURLOPT_TIMEOUT, self::TIMEOUT);
         curl_setopt($curlHandler, CURLOPT_CONNECTTIMEOUT, 60);
-        
+
         if (strripos($url, 'download')) {
             curl_setopt($curlHandler, CURLOPT_FOLLOWLOCATION, 1);
         }
@@ -128,19 +129,27 @@ class MoySkladICMLParser
                 'Content-Type: application/json'
             ));
 
-        $result = curl_exec($curlHandler);
+
+        
+        
+        $responseBody = curl_exec($curlHandler);
+        $statusCode = curl_getinfo($curlHandler, CURLINFO_HTTP_CODE);
+        $errno = curl_errno($curlHandler);
+        $error = curl_error($curlHandler);
+
         curl_close($curlHandler);
-
-        if ($result === false) {
-            return null;
-        }
-
         if (strripos($url, 'download')) {
-            
-            return $result;
+            return $responseBody;
         }
-
-        $result = json_decode($result,true);
+        $result = json_decode($responseBody, true);
+        
+        if ($statusCode >= 400) {
+                throw new Exception(
+                     $this->getError($result) .
+                " [errno = $errno, error = $error]",
+                $statusCode
+                );
+        }
 
         return $result;
     }
@@ -163,44 +172,52 @@ class MoySkladICMLParser
         }
 
         while (true) {
-            $response = $this->requestJson(self::BASE_URL . self::FOLDER_LIST_URL . '?expand=productFolder&limit=100&offset=' . $offset);
+            
+            try { 
+                $response = $this->requestJson(self::BASE_URL . self::FOLDER_LIST_URL . '?expand=productFolder&limit=100&offset=' . $offset);
+            } catch (Exception $e) {
+                echo $e->getMessage();
+                return array();
+            }
+            
+            if ($response['rows']) {
+                foreach ($response['rows'] as $folder) {
+                    if (isset($ignoreCategories['ids']) && is_array($ignoreCategories['ids'])) {
 
-            foreach ($response['rows'] as $folder) {
-                if (isset($ignoreCategories['ids']) && is_array($ignoreCategories['ids'])) {
-                    
-                    if (in_array($folder['id'], $ignoreCategories['id'])) {
-                        continue;
-                    }
-                    
-                    if (isset($folder['productFolder']['id'])) {
-                        if (in_array($folder['productFolder']['id'],$ignoreCategories['ids'])) {
+                        if (in_array($folder['id'], $ignoreCategories['id'])) {
                             continue;
                         }
-                    }
-                }
 
-                if (isset($ignoreCategories['externalCode']) && is_array($ignoreCategories['externalCode'])) {
-                    if (in_array($folder['externalCode'],$ignoreCategories['externalCode'])) {
-                        continue;
-                    }
-                    if (isset($folder['productFolder']['externalCode'])) {
-                        if (in_array($folder['productFolder']['externalCode'],$ignoreCategories['externalCode'])) {
-                            continue;
+                        if (isset($folder['productFolder']['id'])) {
+                            if (in_array($folder['productFolder']['id'],$ignoreCategories['ids'])) {
+                                continue;
+                            }
                         }
                     }
-                }
 
-                if($folder['archived'] == false) {
-                    $categories[] =
-                        array(
-                            'name' => $folder['name'],
-                            'externalCode' => $folder['externalCode'],
-                            'parentId' => isset($folder['productFolder']) ?
-                                $folder['productFolder']['externalCode'] : '',
-                        );
+                    if (isset($ignoreCategories['externalCode']) && is_array($ignoreCategories['externalCode'])) {
+                        if (in_array($folder['externalCode'],$ignoreCategories['externalCode'])) {
+                            continue;
+                        }
+                        if (isset($folder['productFolder']['externalCode'])) {
+                            if (in_array($folder['productFolder']['externalCode'],$ignoreCategories['externalCode'])) {
+                                continue;
+                            }
+                        }
+                    }
+
+                    if($folder['archived'] == false) {
+                        $categories[] =
+                            array(
+                                'name' => $folder['name'],
+                                'externalCode' => $folder['externalCode'],
+                                'parentId' => isset($folder['productFolder']) ?
+                                    $folder['productFolder']['externalCode'] : '',
+                            );
+                    }
                 }
             }
-
+            
             if (is_null($end)) {
                 $end = $response['meta']['size'] - self::STEP;
             } else {
@@ -239,9 +256,12 @@ class MoySkladICMLParser
         }
 
         while (true) {
-
-            $response = $this->requestJson($url.'&offset='.$offset);
-
+            try{  
+                $response = $this->requestJson($url.'&offset='.$offset);
+            } catch (Exception $e) {
+                echo $e->getMessage();
+                return array();
+            }
             if ($response && $response['rows']) {
 
                 foreach ($response['rows'] as $assortiment) {
@@ -432,7 +452,7 @@ class MoySkladICMLParser
         $xmlstr = '<yml_catalog date="'.$date->format('Y-m-d H:i:s').'"><shop><name>'.$this->shop.'</name></shop></yml_catalog>';
         $xml = new SimpleXMLElement($xmlstr);
 
-        if (count($categories)) {
+        if (count($categories) > 0) {
             $categoriesXml = $this->icmlAdd($xml->shop, 'categories', '');
             foreach ($categories as $category) {
                 $categoryXml = $this->icmlAdd($categoriesXml, 'category', htmlspecialchars($category['name']));
@@ -445,67 +465,77 @@ class MoySkladICMLParser
         }
 
         $offersXml = $this->icmlAdd($xml->shop, 'offers', '');
+        if (count($products) > 0) {
+            foreach ($products as $product) {
+                $offerXml = $offersXml->addChild('offer');
+                $offerXml->addAttribute('id', $product['id']);
+                $offerXml->addAttribute('productId', $product['productId']);
 
-        foreach ($products as $product) {
-            $offerXml = $offersXml->addChild('offer');
-            $offerXml->addAttribute('id', $product['id']);
-            $offerXml->addAttribute('productId', $product['productId']);
+                $this->icmlAdd($offerXml, 'xmlId', $product['xmlId']);
+                $this->icmlAdd($offerXml, 'price', number_format($product['price'], 2, '.', ''));
 
-            $this->icmlAdd($offerXml, 'xmlId', $product['xmlId']);
-            $this->icmlAdd($offerXml, 'price', number_format($product['price'], 2, '.', ''));
-            $this->icmlAdd($offerXml, 'purchasePrice', number_format($product['purchasePrice'], 2, '.', ''));
-            $this->icmlAdd($offerXml, 'name', htmlspecialchars($product['name']));
-            $this->icmlAdd($offerXml, 'productName', htmlspecialchars($product['productName']));
-            $this->icmlAdd($offerXml, 'vatRate', $product['effectiveVat']);
+               if (!isset($this->options['purchasePrice']) || $this->options['purchasePrice'] != false) {
+                    $this->icmlAdd($offerXml, 'purchasePrice', number_format($product['purchasePrice'], 2, '.', ''));
+                }
 
-            if (!empty($product['url'])) {
-                $this->icmlAdd($offerXml, 'url', htmlspecialchars($product['url']));
+                $this->icmlAdd($offerXml, 'name', htmlspecialchars($product['name']));
+                $this->icmlAdd($offerXml, 'productName', htmlspecialchars($product['productName']));
+                $this->icmlAdd($offerXml, 'vatRate', $product['effectiveVat']);
+
+                if (!empty($product['url'])) {
+                    $this->icmlAdd($offerXml, 'url', htmlspecialchars($product['url']));
+                }
+
+                if ($product['unit'] != '') {
+                    $unitXml = $offerXml->addChild('unit');
+                    $unitXml->addAttribute('code', $product['unit']['code']);
+                    $unitXml->addAttribute('name', $product['unit']['description']);
+                    $unitXml->addAttribute('sym', $product['unit']['name']);
+                }
+
+                if ($product['categoryId']) {
+                        $this->icmlAdd($offerXml, 'categoryId', $product['categoryId']);
+                    }else {
+                        $this->icmlAdd($offerXml, 'categoryId', 'warehouseRoot');
+                    }
+
+                if ($product['article']) {
+                        $art = $this->icmlAdd($offerXml, 'param', $product['article']);
+                        $art->addAttribute('code', 'article');
+                        $art->addAttribute('name', 'Артикул');
+                    }
+
+                if ($product['weight']) {
+                    if (isset($this->options['tagWeight']) && $this->options['tagWeight'] === true) {
+                        $wei = $this->icmlAdd($offerXml, 'weight', $product['weight']);
+                    } else {
+                        $wei = $this->icmlAdd($offerXml, 'param', $product['weight']);
+                        $wei->addAttribute('code', 'weight');
+                        $wei->addAttribute('name', 'Вес');
+                    }
+                }
+
+                if ($product['code']) {
+                        $cod = $this->icmlAdd($offerXml, 'param', $product['code']);
+                        $cod->addAttribute('code', 'code');
+                        $cod->addAttribute('name', 'Код');
+                }
+
+                if ($product['vendor']) {
+                        $this->icmlAdd($offerXml, 'vendor', $product['vendor']);
+                    }
+
+                if (isset($product['image']['imageUrl']) &&
+                        !empty($this->options['imageDownload']['pathToImage']) &&
+                        !empty($this->options['imageDownload']['site'])) 
+                    {
+                        $this->icmlAdd($offerXml, 'picture', $this->saveImage($product['image']));
+                    }
+
             }
-
-            if ($product['unit'] != '') {
-                $unitXml = $offerXml->addChild('unit');
-                $unitXml->addAttribute('code', $product['unit']['code']);
-                $unitXml->addAttribute('name', $product['unit']['description']);
-                $unitXml->addAttribute('sym', $product['unit']['name']);
-            }
-
-            if ($product['categoryId']) {
-                    $this->icmlAdd($offerXml, 'categoryId', $product['categoryId']);
-                }else {
-                    $this->icmlAdd($offerXml, 'categoryId', 'warehouseRoot');
-                }
-
-            if ($product['article']) {
-                    $art = $this->icmlAdd($offerXml, 'param', $product['article']);
-                    $art->addAttribute('code', 'article');
-                    $art->addAttribute('name', 'Артикул');
-                }
-
-            if ($product['weight']) {
-                    $wei = $this->icmlAdd($offerXml, 'param', $product['weight']);
-                    $wei->addAttribute('code', 'weight');
-                    $wei->addAttribute('name', 'Вес');
-                }
-
-            if ($product['code']) {
-                    $cod = $this->icmlAdd($offerXml, 'param', $product['code']);
-                    $cod->addAttribute('code', 'code');
-                    $cod->addAttribute('name', 'Код');
-                }
-
-            if ($product['vendor']) {
-                    $this->icmlAdd($offerXml, 'vendor', $product['vendor']);
-                }
-
-            if (isset($product['image']['imageUrl']) &&
-                    !empty($this->options['imageDownload']['pathToImage']) &&
-                    !empty($this->options['imageDownload']['site'])) 
-                {
-                    $this->icmlAdd($offerXml, 'picture', $this->saveImage($product['image']));
-                }
-
         }
         return $xml;
+        
     }
 
     /**
@@ -593,7 +623,7 @@ class MoySkladICMLParser
         
         if (file_exists($root . $imgDirrectory . '/' . $image['name']) === false) {
             $content = $this->requestJson($image['imageUrl']);
-            
+
             if ($content) {
                 file_put_contents($root .  $imgDirrectory . '/' . $image['name'], $content);
             }
@@ -632,5 +662,57 @@ class MoySkladICMLParser
         $link = $this->options['imageDownload']['site'] . '/' . $path . '/' . $name;
 
         return $link;
+    }
+    
+    
+    /**
+     * Get error.
+     *
+     * @param array
+     * @return string
+     * @access private
+     */
+    private function getError($result)
+    {
+        $error = "";
+
+        if (!empty($result['errors'])) {
+            foreach ($result['errors'] as $err) {
+                if (!empty($err['parameter'])) {
+                    $error .= "'" . $err['parameter']."': ".$err['error'];
+                } else {
+                    $error .= $err['error'];
+                }
+            }
+
+            unset($err);
+
+            return $error;
+        } else {
+            if (is_array($result)) {
+                foreach ($result as $value) {
+                    if (!empty($value['errors'])) {
+                        foreach ($value['errors'] as $err) {
+                            if (!empty($err['parameter'])) {
+                                $error .= "'" . $err['parameter']."': ".$err['error'];
+                            } else {
+                                $error .= $err['error'];
+                            }
+                        }
+
+                        unset($err);
+                        $error .= " / ";
+                    }
+                }
+
+                unset($value);
+
+                if (!empty(trim($error, ' / '))) {
+                    return trim($error, ' / ');
+                }
+            }
+        }
+
+        return "Internal server error (" . json_encode($result) . ")";
     }
 }
