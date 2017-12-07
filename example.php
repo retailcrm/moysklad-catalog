@@ -4,9 +4,6 @@ include __DIR__ . '/MoySkladICMLParser.php';
 
 // configure
 $parser = new MoySkladICMLParser(
-        
-        'admin2@kh',
-        'indoor',
     'adminlogin',
     'password',
     'shopname',
