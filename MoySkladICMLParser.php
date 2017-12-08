@@ -393,33 +393,6 @@ class MoySkladICMLParser
                         $products[$assortiment['id']]['unit'] = '';
                     }
                     
-                    
-                    
-                    
-                    
-//                    if (isset($assortiment['uom']) && isset($assortiment['uom']['code'])) {
-//                        $products[$assortiment['id']]['unit'] = array (
-//                            'code' => $assortiment['uom']['code'],
-//                            'name' => $assortiment['uom']['name'],
-//                            'description' => $assortiment['uom']['description'],
-//                        );
-//                    } elseif (isset($assortiment['product']['uom']) && isset($assortiment['product']['uom']['code'])) {
-//                        $products[$assortiment['id']]['unit'] = array (
-//                            'code' => $assortiment['product']['uom']['code'],
-//                            'name' => $assortiment['product']['uom']['name'],
-//                            'description' => $assortiment['product']['uom']['description'],
-//                        );
-//                    }  else {
-//                        $products[$assortiment['id']]['unit'] = '';
-//                    }
-//switch ($assortiment['uom']) {
-//    case $assortiment['uom']:
-//        $products[$assortiment['id']]['unit'] = array (
-//            'code' => $assortiment['uom']['code'],
-//            'name' => $assortiment['uom']['name'],
-//            'description' => $assortiment['uom']['description'],
-//        );
-//}
                     if (isset($assortiment['effectiveVat']) && $assortiment['effectiveVat'] != 0) {
                         $products[$assortiment['id']]['effectiveVat'] = $assortiment['effectiveVat'];
                     } elseif (isset($assortiment['product']['effectiveVat']) && $assortiment['product']['effectiveVat'] != 0) {
