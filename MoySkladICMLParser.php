@@ -266,7 +266,6 @@ class MoySkladICMLParser
 
                 foreach ($response['rows'] as $assortiment) {
 
-//var_dump($assortiment['uom']['externlaCode']);
                    if (!empty($assortiment['modificationsCount']) ||
                             $assortiment['meta']['type'] == 'service' || 
                             $assortiment['meta']['type'] == 'consignment') {
@@ -376,7 +375,7 @@ class MoySkladICMLParser
                             );
                         }
                     } elseif (isset($assortiment['product']['uom'])) {
-                        if (isset($assortiment['uom']['code'])){
+                        if (isset($assortiment['product']['uom']['code'])){
                             $products[$assortiment['id']]['unit'] = array (
                                 'code' => $assortiment['product']['uom']['code'],
                                 'name' => $assortiment['product']['uom']['name'],
