@@ -266,6 +266,7 @@ class MoySkladICMLParser
 
                 foreach ($response['rows'] as $assortiment) {
 
+//var_dump($assortiment['uom']['externlaCode']);
                    if (!empty($assortiment['modificationsCount']) ||
                             $assortiment['meta']['type'] == 'service' || 
                             $assortiment['meta']['type'] == 'consignment') {
@@ -360,22 +361,38 @@ class MoySkladICMLParser
                         $products[$assortiment['id']]['price'] = ((float)0);
                     }
 
-                    if (isset($assortiment['uom']) && isset($assortiment['uom']['code'])) {
-                        $products[$assortiment['id']]['unit'] = array (
-                            'code' => $assortiment['uom']['code'],
-                            'name' => $assortiment['uom']['name'],
-                            'description' => $assortiment['uom']['description'],
-                        );
-                    } elseif (isset($assortiment['product']['uom']) && isset($assortiment['product']['uom']['code'])) {
-                        $products[$assortiment['id']]['unit'] = array (
-                            'code' => $assortiment['product']['uom']['code'],
-                            'name' => $assortiment['product']['uom']['name'],
-                            'description' => $assortiment['product']['uom']['description'],
-                        );
+                    if (isset($assortiment['uom'])){
+                        if (isset($assortiment['uom']['code'])){
+                            $products[$assortiment['id']]['unit'] = array (
+                                'code' => $assortiment['uom']['code'],
+                                'name' => $assortiment['uom']['name'],
+                                'description' => $assortiment['uom']['description'],
+                            );
+                        } elseif (isset($assortiment['uom']['externalCode'])) {
+                            $products[$assortiment['id']]['unit'] = array (
+                                'code' => $assortiment['uom']['externalCode'],
+                                'name' => str_replace(' ', '',$assortiment['uom']['name']),
+                                'description' => $assortiment['uom']['name'],
+                            );
+                        }
+                    } elseif (isset($assortiment['product']['uom'])) {
+                        if (isset($assortiment['uom']['code'])){
+                            $products[$assortiment['id']]['unit'] = array (
+                                'code' => $assortiment['product']['uom']['code'],
+                                'name' => $assortiment['product']['uom']['name'],
+                                'description' => $assortiment['product']['uom']['description'],
+                            );
+                        } elseif (isset($assortiment['product']['uom']['externalCode'])) {
+                            $products[$assortiment['id']]['unit'] = array (
+                                'code' => $assortiment['product']['uom']['externalCode'],
+                                'name' => str_replace(' ', '',$assortiment['product']['uom']['name']),
+                                'description' => $assortiment['product']['uom']['name'],
+                            );
+                        }
                     } else {
                         $products[$assortiment['id']]['unit'] = '';
                     }
-
+                    
                     if (isset($assortiment['effectiveVat']) && $assortiment['effectiveVat'] != 0) {
                         $products[$assortiment['id']]['effectiveVat'] = $assortiment['effectiveVat'];
                     } elseif (isset($assortiment['product']['effectiveVat']) && $assortiment['product']['effectiveVat'] != 0) {
