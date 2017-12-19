@@ -723,8 +723,8 @@ class MoySkladICMLParser
 
                 unset($value);
 
-                if (!empty(trim($error, ' / '))) {
-                    return trim($error, ' / ');
+                if (!empty($error)) {
+                    return $error;
                 }
             }
         }
