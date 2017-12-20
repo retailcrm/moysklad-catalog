@@ -89,16 +89,18 @@ class MoySkladICMLParser
     {
         
         $assortiment = $this->parseAssortiment();
-
-        if (count($assortiment) > 0) {
+        $countAssortiment = count($assortiment);
+        
+        if ($countAssortiment > 0) {
             $categories = $this->parserFolder();
         } else {
             $categories = array();
         }
         
         $icml = $this->ICMLCreate($categories, $assortiment);
+        $countCategories = count($categories);
         
-        if (count($categories) > 0 && count($assortiment) > 0) {
+        if ($countCategories > 0 && $countAssortiment > 0) {
             $icml->asXML($this->getFilePath());
         }
 
@@ -110,6 +112,7 @@ class MoySkladICMLParser
      */
     protected function requestJson($url)
     {
+        $downloadImage = strripos($url, 'download');
 
         $curlHandler = curl_init();
         curl_setopt($curlHandler, CURLOPT_USERPWD, $this->login . ':' . $this->pass);
@@ -121,26 +124,25 @@ class MoySkladICMLParser
         curl_setopt($curlHandler, CURLOPT_TIMEOUT, self::TIMEOUT);
         curl_setopt($curlHandler, CURLOPT_CONNECTTIMEOUT, 60);
 
-        if (strripos($url, 'download')) {
+        if ($downloadImage) {
             curl_setopt($curlHandler, CURLOPT_FOLLOWLOCATION, 1);
         }
-        
+
         curl_setopt($curlHandler, CURLOPT_HTTPHEADER, array(
                 'Content-Type: application/json'
             ));
 
-
-        
-        
         $responseBody = curl_exec($curlHandler);
         $statusCode = curl_getinfo($curlHandler, CURLINFO_HTTP_CODE);
         $errno = curl_errno($curlHandler);
         $error = curl_error($curlHandler);
 
         curl_close($curlHandler);
-        if (strripos($url, 'download')) {
+        
+        if ($downloadImage) {
             return $responseBody;
         }
+
         $result = json_decode($responseBody, true);
         
         if ($statusCode >= 400) {
@@ -467,8 +469,9 @@ class MoySkladICMLParser
         $date = new DateTime();
         $xmlstr = '<yml_catalog date="'.$date->format('Y-m-d H:i:s').'"><shop><name>'.$this->shop.'</name></shop></yml_catalog>';
         $xml = new SimpleXMLElement($xmlstr);
-
-        if (count($categories) > 0) {
+        $countCategories = count($categories);
+        
+        if ($countCategories > 0) {
             $categoriesXml = $this->icmlAdd($xml->shop, 'categories', '');
             foreach ($categories as $category) {
                 $categoryXml = $this->icmlAdd($categoriesXml, 'category', htmlspecialchars($category['name']));
@@ -481,7 +484,9 @@ class MoySkladICMLParser
         }
 
         $offersXml = $this->icmlAdd($xml->shop, 'offers', '');
-        if (count($products) > 0) {
+        $countProducts = count($products);
+        
+        if ($countProducts > 0) {
             foreach ($products as $product) {
                 $offerXml = $offersXml->addChild('offer');
                 $offerXml->addAttribute('id', $product['id']);
@@ -578,8 +583,9 @@ class MoySkladICMLParser
         
         $path = isset($this->options['directory']) && $this->options['directory'] ?
             $this->options['directory'] : __DIR__;
-
-        if (substr($path, -1) === '/') {
+        $endPath = substr($path, -1);
+        
+        if ($endPath === '/') {
             $path = substr($path, 0, -1);
         }
 
@@ -621,12 +627,16 @@ class MoySkladICMLParser
         
         $root = __DIR__;
         $imgDirrectory = $this->options['imageDownload']['pathToImage'];
-        
-        if (substr($imgDirrectory, 0, 1) === '/')  {
+
+        $startPathDirrectory = substr($imgDirrectory,0, 1);
+
+        if ($startPathDirrectory == '/')  {
             $imgDirrectory = substr($imgDirrectory, 1);
         }
+
+        $endPathDirrectory = substr($imgDirrectory, -1);
         
-        if (substr($imgDirrectory, -1) === '/') {
+        if ($endPathDirrectory == '/') {
             $imgDirrectory = substr($imgDirrectory, 0, -1);
         }
         
@@ -636,7 +646,7 @@ class MoySkladICMLParser
         if (file_exists($root . '/' . $imgDirrectory) === false) {
             @mkdir($root . '/' . $imgDirrectory);
         }
-        
+
         if (file_exists($root . $imgDirrectory . '/' . $image['name']) === false) {
             $content = $this->requestJson($image['imageUrl']);
 
@@ -648,8 +658,8 @@ class MoySkladICMLParser
         $imageUrl = $this->linkGeneration($image['name']);
 
         return $imageUrl;
-
     }
+
     /**
      * Генерация ссылки на изображение
      * 
@@ -663,11 +673,15 @@ class MoySkladICMLParser
         }
         $path = $this->options['imageDownload']['pathToImage'];
         
-        if (substr($path, 0, 1) === '/') {
+        $startPath = substr($path, 0, 1);
+        
+        if ($startPath === '/') {
             $path = substr($path, 1); 
         }
 
-        if (substr($path, -1) === '/') {
+        $endPath = substr($path, -1);
+
+        if ($endPath === '/') {
             $path = substr($path, 0, -1);
         }
 
@@ -722,7 +736,8 @@ class MoySkladICMLParser
                 }
 
                 unset($value);
-
+                $error = trim($error, ' /');
+                
                 if (!empty($error)) {
                     return $error;
                 }
