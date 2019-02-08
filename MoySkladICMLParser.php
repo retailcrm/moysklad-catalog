@@ -89,15 +89,13 @@ class MoySkladICMLParser
     {
         $assortiment = $this->parseAssortiment();
         $countAssortiment = count($assortiment);
-        
-        if ($countAssortiment > 0) {
-            $categories = $this->parserFolder();
-        }
-
+        $categories = $this->parserFolder();
         $countCategories = count($categories);
-
+        
         if ($countCategories > 0) {
             $assortiment = $this->deleteProduct($categories, $assortiment);
+        } else {
+            return;
         }
 
         $icml = $this->ICMLCreate($categories, $assortiment);
@@ -590,13 +588,17 @@ class MoySkladICMLParser
                     !empty($this->options['imageDownload']['pathToImage']) &&
                     !empty($this->options['imageDownload']['site']))
                 {
-                    $this->icmlAdd($offerXml, 'picture', $this->saveImage($product['image']));
+                    $imgSrc = $this->saveImage($product['image']);
+                    
+                    if (!empty($imgSrc)){
+                        $this->icmlAdd($offerXml, 'picture', $this->saveImage($product['image']));   
+                    }
                 }
 
             }
         }
+
         return $xml;
-        
     }
 
     /**
@@ -694,7 +696,7 @@ class MoySkladICMLParser
             } catch (Exception $e) {
                 echo $e->getMessage();
 
-                return false;
+                return '';
             }
 
             if ($content) {
