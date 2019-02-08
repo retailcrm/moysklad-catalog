@@ -87,29 +87,29 @@ class MoySkladICMLParser
      */
     public function generateICML()
     {
-        
         $assortiment = $this->parseAssortiment();
         $countAssortiment = count($assortiment);
         
         if ($countAssortiment > 0) {
             $categories = $this->parserFolder();
+        }
+
+        $countCategories = count($categories);
+
+        if ($countCategories > 0) {
             $assortiment = $this->deleteProduct($categories, $assortiment);
-        } else {
-            $categories = array();
         }
 
         $icml = $this->ICMLCreate($categories, $assortiment);
-        $countCategories = count($categories);
-        
+
         if ($countCategories > 0 && $countAssortiment > 0) {
             $icml->asXML($this->getFilePath());
         }
-
     }
 
     /**
      * @param string $url
-     * @return JSON
+     * @return string
      */
     protected function requestJson($url)
     {
@@ -147,11 +147,11 @@ class MoySkladICMLParser
         $result = json_decode($responseBody, true);
         
         if ($statusCode >= 400) {
-                throw new Exception(
-                     $this->getError($result) .
+            throw new Exception(
+                $this->getError($result) .
                 " [errno = $errno, error = $error]",
                 $statusCode
-                );
+            );
         }
 
         return $result;
@@ -164,6 +164,7 @@ class MoySkladICMLParser
      */
     protected function parserFolder()
     {
+        $categories = [];
         $offset = 0;
         $end = null;
         $ignoreCategories = $this->getIgnoreProductGroupsInfo();
@@ -175,7 +176,7 @@ class MoySkladICMLParser
         }
 
         while (true) {
-            
+
             try { 
                 $response = $this->requestJson(self::BASE_URL . self::FOLDER_LIST_URL . '?expand=productFolder&limit=100&offset=' . $offset);
             } catch (Exception $e) {
@@ -349,17 +350,17 @@ class MoySkladICMLParser
                             ),
                     );
                     if (isset($this->options['customFields'])) {
-                        if (!empty($assortiment['product']['attributes'])) {
-                            $products[$assortiment['id']]['customFields'] = $this->getCustomFields($assortiment['product']['attributes']);
-                        } elseif (!empty($assortiment['attributes'])){
+                        if (!empty($assortiment['attributes'])) {
                             $products[$assortiment['id']]['customFields'] = $this->getCustomFields($assortiment['attributes']);
+                        } elseif (!empty($assortiment['product']['attributes'])){
+                            $products[$assortiment['id']]['customFields'] = $this->getCustomFields($assortiment['product']['attributes']);
                         }
                     }
 
-                    if (!empty($assortiment['product']['barcodes'])){
-                        $products[$assortiment['id']]['barcodes'] = $assortiment['product']['barcodes'];
-                    } elseif (!empty($assortiment['barcodes'])){
+                    if (!empty($assortiment['barcodes'])){
                         $products[$assortiment['id']]['barcodes'] = $assortiment['barcodes'];
+                    } elseif (!empty($assortiment['product']['barcodes'])){
+                        $products[$assortiment['id']]['barcodes'] = $assortiment['product']['barcodes'];
                     }
 
                     if (isset($this->options['loadPurchasePrice']) && $this->options['loadPurchasePrice'] === true) {
@@ -367,8 +368,9 @@ class MoySkladICMLParser
                             $products[$assortiment['id']]['purchasePrice'] = (((float)$assortiment['buyPrice']['value']) / 100);
                         } elseif (isset($assortiment['product']['buyPrice']['value'])) {
                            $products[$assortiment['id']]['purchasePrice'] = (((float)$assortiment['product']['buyPrice']['value']) / 100);
-                    }
-                        $products[$assortiment['id']]['purchasePrice'] = 0;
+                        } else {
+                            $products[$assortiment['id']]['purchasePrice'] = 0;
+                        }
                     }
 
                     if (isset($assortiment['salePrices'][0]['value']) && $assortiment['salePrices'][0]['value'] != 0) {
@@ -530,6 +532,7 @@ class MoySkladICMLParser
                     if (!empty($product['customFields']['dimensions'])){
                         $this->icmlAdd($offerXml, 'dimensions', $product['customFields']['dimensions']);
                     }
+
                     if (!empty($product['customFields']['param'])){
 
                         foreach($product['customFields']['param'] as $param){
@@ -580,7 +583,7 @@ class MoySkladICMLParser
                 }
 
                 if ($product['vendor']) {
-                        $this->icmlAdd($offerXml, 'vendor', $product['vendor']);
+                    $this->icmlAdd($offerXml, 'vendor', $product['vendor']);
                 }
 
                 if (isset($product['image']['imageUrl']) &&
@@ -685,7 +688,14 @@ class MoySkladICMLParser
         }
 
         if (file_exists($root . $imgDirrectory . '/' . $image['name']) === false) {
-            $content = $this->requestJson($image['imageUrl']);
+
+            try {
+                $content = $this->requestJson($image['imageUrl']);
+            } catch (Exception $e) {
+                echo $e->getMessage();
+
+                return false;
+            }
 
             if ($content) {
                 file_put_contents($root .  $imgDirrectory . '/' . $image['name'], $content);
@@ -819,7 +829,7 @@ class MoySkladICMLParser
             }
         }
 
-        if (isset($this->options['customFields']['dimensions'])) {
+        if (isset($this->options['customFields']['paramTag'])) {
             if ($this->options['customFields']['paramTag']) {
                 foreach ($this->options['customFields']['paramTag'] as $paramTag){
                    $paramTag = explode('#',$paramTag);
@@ -827,7 +837,7 @@ class MoySkladICMLParser
                    foreach($attributes as $attribute) {
 
                         if ($attribute['id'] == $paramTag[1]) {
-                            $result['param'][] = array('code' => $paramTag[0],'name' => $attribute['name'], 'value'=> $attribute['value']);
+                            $result['param'][] = array('code' => $paramTag[0],'name' => $attribute['name'], 'value'=> htmlspecialchars($attribute['value']));
                         }
                     }
                 }
