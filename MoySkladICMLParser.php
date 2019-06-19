@@ -92,7 +92,12 @@ class MoySkladICMLParser
         $categories = $this->parserFolder();
         $countCategories = count($categories);
         
+<<<<<<< 4fa66768add0d2c93f587b1796cc4cdb5017d437
         if ($countCategories > 0) {
+=======
+        if ($countAssortiment > 0) {
+            $categories = $this->parserFolder();
+>>>>>>> fix generating merchandise of excluded subcategories, Adding new functionality
             $assortiment = $this->deleteProduct($categories, $assortiment);
         } else {
             return;
@@ -348,6 +353,7 @@ class MoySkladICMLParser
                             ),
                     );
                     if (isset($this->options['customFields'])) {
+<<<<<<< 4fa66768add0d2c93f587b1796cc4cdb5017d437
                         if (!empty($assortiment['attributes'])) {
                             $products[$assortiment['id']]['customFields'] = $this->getCustomFields($assortiment['attributes']);
                         } elseif (!empty($assortiment['product']['attributes'])){
@@ -359,6 +365,19 @@ class MoySkladICMLParser
                         $products[$assortiment['id']]['barcodes'] = $assortiment['barcodes'];
                     } elseif (!empty($assortiment['product']['barcodes'])){
                         $products[$assortiment['id']]['barcodes'] = $assortiment['product']['barcodes'];
+=======
+                        if (!empty($assortiment['product']['attributes'])) {
+                            $products[$assortiment['id']]['customFields'] = $this->getCustomFields($assortiment['product']['attributes']);
+                        } elseif (!empty($assortiment['attributes'])){
+                            $products[$assortiment['id']]['customFields'] = $this->getCustomFields($assortiment['attributes']);
+                        }
+                    }
+
+                    if (!empty($assortiment['product']['barcodes'])){
+                        $products[$assortiment['id']]['barcodes'] = $assortiment['product']['barcodes'];
+                    } elseif (!empty($assortiment['barcodes'])){
+                        $products[$assortiment['id']]['barcodes'] = $assortiment['barcodes'];
+>>>>>>> fix generating merchandise of excluded subcategories, Adding new functionality
                     }
 
                     if (isset($this->options['loadPurchasePrice']) && $this->options['loadPurchasePrice'] === true) {
@@ -366,9 +385,14 @@ class MoySkladICMLParser
                             $products[$assortiment['id']]['purchasePrice'] = (((float)$assortiment['buyPrice']['value']) / 100);
                         } elseif (isset($assortiment['product']['buyPrice']['value'])) {
                            $products[$assortiment['id']]['purchasePrice'] = (((float)$assortiment['product']['buyPrice']['value']) / 100);
+<<<<<<< 4fa66768add0d2c93f587b1796cc4cdb5017d437
                         } else {
                             $products[$assortiment['id']]['purchasePrice'] = 0;
                         }
+=======
+                    }
+                        $products[$assortiment['id']]['purchasePrice'] = 0;
+>>>>>>> fix generating merchandise of excluded subcategories, Adding new functionality
                     }
 
                     if (isset($assortiment['salePrices'][0]['value']) && $assortiment['salePrices'][0]['value'] != 0) {
@@ -530,7 +554,10 @@ class MoySkladICMLParser
                     if (!empty($product['customFields']['dimensions'])){
                         $this->icmlAdd($offerXml, 'dimensions', $product['customFields']['dimensions']);
                     }
+<<<<<<< 4fa66768add0d2c93f587b1796cc4cdb5017d437
 
+=======
+>>>>>>> fix generating merchandise of excluded subcategories, Adding new functionality
                     if (!empty($product['customFields']['param'])){
 
                         foreach($product['customFields']['param'] as $param){
@@ -581,18 +608,26 @@ class MoySkladICMLParser
                 }
 
                 if ($product['vendor']) {
+<<<<<<< 4fa66768add0d2c93f587b1796cc4cdb5017d437
                     $this->icmlAdd($offerXml, 'vendor', $product['vendor']);
+=======
+                        $this->icmlAdd($offerXml, 'vendor', $product['vendor']);
+>>>>>>> fix generating merchandise of excluded subcategories, Adding new functionality
                 }
 
                 if (isset($product['image']['imageUrl']) &&
                     !empty($this->options['imageDownload']['pathToImage']) &&
                     !empty($this->options['imageDownload']['site']))
                 {
+<<<<<<< 4fa66768add0d2c93f587b1796cc4cdb5017d437
                     $imgSrc = $this->saveImage($product['image']);
                     
                     if (!empty($imgSrc)){
                         $this->icmlAdd($offerXml, 'picture', $this->saveImage($product['image']));   
                     }
+=======
+                    $this->icmlAdd($offerXml, 'picture', $this->saveImage($product['image']));
+>>>>>>> fix generating merchandise of excluded subcategories, Adding new functionality
                 }
 
             }
@@ -831,7 +866,11 @@ class MoySkladICMLParser
             }
         }
 
+<<<<<<< 4fa66768add0d2c93f587b1796cc4cdb5017d437
         if (isset($this->options['customFields']['paramTag'])) {
+=======
+        if (isset($this->options['customFields']['dimensions'])) {
+>>>>>>> fix generating merchandise of excluded subcategories, Adding new functionality
             if ($this->options['customFields']['paramTag']) {
                 foreach ($this->options['customFields']['paramTag'] as $paramTag){
                    $paramTag = explode('#',$paramTag);
@@ -839,7 +878,11 @@ class MoySkladICMLParser
                    foreach($attributes as $attribute) {
 
                         if ($attribute['id'] == $paramTag[1]) {
+<<<<<<< 4fa66768add0d2c93f587b1796cc4cdb5017d437
                             $result['param'][] = array('code' => $paramTag[0],'name' => $attribute['name'], 'value'=> htmlspecialchars($attribute['value']));
+=======
+                            $result['param'][] = array('code' => $paramTag[0],'name' => $attribute['name'], 'value'=> $attribute['value']);
+>>>>>>> fix generating merchandise of excluded subcategories, Adding new functionality
                         }
                     }
                 }
