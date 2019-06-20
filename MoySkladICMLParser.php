@@ -91,7 +91,7 @@ class MoySkladICMLParser
         $countAssortiment = count($assortiment);
         $categories = $this->parserFolder();
         $countCategories = count($categories);
-        
+
         if ($countCategories > 0) {
             $assortiment = $this->deleteProduct($categories, $assortiment);
         } else {
@@ -268,10 +268,16 @@ class MoySkladICMLParser
 
                 foreach ($response['rows'] as $assortiment) {
 
-                   if (!empty($assortiment['modificationsCount']) ||
-                            $assortiment['meta']['type'] == 'service' || 
+                   if (!empty($assortiment['modificationsCount']) || 
                             $assortiment['meta']['type'] == 'consignment') {
                             continue;
+                    }
+                    
+                    if ($assortiment['meta']['type'] == 'service' && !isset($this->options['service']))
+                    {
+                        if (!isset($this->options['service']) || !$this->options['service']) {
+                            continue;
+                        }
                     }
 
                     if ($ignoreNoCategoryOffers === true) {
@@ -331,14 +337,10 @@ class MoySkladICMLParser
                         'name' => $assortiment['name'],
                         'productName'=> isset($assortiment['product']['name']) ?
                             $assortiment['product']['name'] : $assortiment['name'],
-                        'weight' => isset($assortiment['weight']) ?
-                            $assortiment['weight'] :
-                            $assortiment['product']['weight'],
                         'code' => isset($assortiment['code']) ? (string) $assortiment['code'] : '',
                         'xmlId' => !empty($assortiment['product']['externalCode']) ?
                             ($assortiment['product']['externalCode'] . '#' . $assortiment['externalCode']) :
                             $assortiment['externalCode'],
-
                         'url' => !empty($assortiment['product']['meta']['uuidHref']) ?
                             $assortiment['product']['meta']['uuidHref'] :
                             (
@@ -347,6 +349,13 @@ class MoySkladICMLParser
                                 ''
                             ),
                     );
+
+                    if (isset($assortiment['weight'])) {
+                        $products[$assortiment['id']]['weight'] = $assortiment['weight'];
+                    } elseif (isset($assortiment['product']['weight'])) {
+                        $products[$assortiment['id']]['weight'] = $assortiment['product']['weight'];
+                    }
+
                     if (isset($this->options['customFields'])) {
                         if (!empty($assortiment['attributes'])) {
                             $products[$assortiment['id']]['customFields'] = $this->getCustomFields($assortiment['attributes']);
@@ -361,7 +370,13 @@ class MoySkladICMLParser
                         $products[$assortiment['id']]['barcodes'] = $assortiment['product']['barcodes'];
                     }
 
-                    if (isset($this->options['loadPurchasePrice']) && $this->options['loadPurchasePrice'] === true) {
+                    if (!empty($assortiment['product']['attributes'])) {
+                        $products[$assortiment['id']]['customFields'] = $this->getCustomFields($assortiment['product']['attributes']);
+                    } elseif (!empty($assortiment['attributes'])){
+                        $products[$assortiment['id']]['customFields'] = $this->getCustomFields($assortiment['attributes']);
+                    }
+
+                   if (isset($this->options['loadPurchasePrice']) && $this->options['loadPurchasePrice'] === true) {
                         if (isset($assortiment['buyPrice']['value'])) {
                             $products[$assortiment['id']]['purchasePrice'] = (((float)$assortiment['buyPrice']['value']) / 100);
                         } elseif (isset($assortiment['product']['buyPrice']['value'])) {
@@ -532,7 +547,6 @@ class MoySkladICMLParser
                     }
 
                     if (!empty($product['customFields']['param'])){
-
                         foreach($product['customFields']['param'] as $param){
                             $art = $this->icmlAdd($offerXml, 'param', $param['value']);
                             $art->addAttribute('code', $param['code']);
@@ -564,7 +578,7 @@ class MoySkladICMLParser
                     $art->addAttribute('name', 'Артикул');
                 }
 
-                if ($product['weight']) {
+                if (isset($product['weight'])) {
                     if (isset($this->options['tagWeight']) && $this->options['tagWeight'] === true) {
                         $wei = $this->icmlAdd($offerXml, 'weight', $product['weight']);
                     } else {
@@ -835,9 +849,7 @@ class MoySkladICMLParser
             if ($this->options['customFields']['paramTag']) {
                 foreach ($this->options['customFields']['paramTag'] as $paramTag){
                    $paramTag = explode('#',$paramTag);
-
                    foreach($attributes as $attribute) {
-
                         if ($attribute['id'] == $paramTag[1]) {
                             $result['param'][] = array('code' => $paramTag[0],'name' => $attribute['name'], 'value'=> htmlspecialchars($attribute['value']));
                         }
