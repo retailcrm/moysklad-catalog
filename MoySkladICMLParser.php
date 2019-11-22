@@ -602,6 +602,7 @@ class MoySkladICMLParser
                     !empty($this->options['imageDownload']['pathToImage']) &&
                     !empty($this->options['imageDownload']['site']))
                 {
+                    $product['image']['id'] = $product['id'];
                     $imgSrc = $this->saveImage($product['image']);
                     
                     if (!empty($imgSrc)){
@@ -680,6 +681,16 @@ class MoySkladICMLParser
      * @return string
      */
     protected function saveImage(array $image) {
+
+        if (!empty($image['name'])) {
+            $matches = [];
+
+            preg_match_all('/\..+$/', $image['name'], $matches);
+
+            if (!empty($matches[0][0])) {
+                $image['id'] = $image['id'] . $matches[0][0];
+            }
+        }
         
         $root = __DIR__;
         $imgDirrectory = $this->options['imageDownload']['pathToImage'];
@@ -703,7 +714,7 @@ class MoySkladICMLParser
             @mkdir($root . '/' . $imgDirrectory);
         }
 
-        if (file_exists($root . $imgDirrectory . '/' . $image['name']) === false) {
+        if (file_exists($root . $imgDirrectory . '/' . $image['id']) === false) {
 
             try {
                 $content = $this->requestJson($image['imageUrl']);
@@ -714,11 +725,11 @@ class MoySkladICMLParser
             }
 
             if ($content) {
-                file_put_contents($root .  $imgDirrectory . '/' . $image['name'], $content);
+                file_put_contents($root .  $imgDirrectory . '/' . $image['id'], $content);
             }
         }
 
-        $imageUrl = $this->linkGeneration($image['name']);
+        $imageUrl = $this->linkGeneration($image['id']);
 
         return $imageUrl;
     }
